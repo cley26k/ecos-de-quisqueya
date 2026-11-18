@@ -1,0 +1,1001 @@
+<meta charset="utf-8">
+<title>Ecos de Quisqueya</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Pixelify+Sans:wght@400;500;600&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: one 16:9 pixel stage (640x360 internal) that fills the screen; dialogue floats on the stage on wide screens and drops below it on phones. Single deliberate night palette. */
+:root{
+  --ink:#0e0b13; --night:#17111d; --panel:rgba(18,12,22,.92); --line:#ecdcb6;
+  --gold:#e8bb5e; --coral:#e6775c; --sea:#5fa3a0; --text:#f4ead8; --muted:#b5a68e;
+  --parch:#efe2c2; --parch-ink:#2a1c14; --parch-mute:#6b5640;
+  --f-title:'IM Fell English SC','Iowan Old Style',Georgia,serif;
+  --f-ui:'Pixelify Sans',ui-monospace,'Courier New',monospace;
+  --f-body:'Spectral',Georgia,'Times New Roman',serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--text);font-family:var(--f-body);font-size:15px;overflow-x:hidden}
+.app{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+.stage{position:relative;width:min(100%,calc((100dvh - 150px) * 16 / 9));aspect-ratio:16/9;max-width:100%;container-type:inline-size;background:#000;box-shadow:0 0 0 2px #000,0 0 0 4px #2b2030,0 18px 60px rgba(0,0,0,.6);overflow:hidden}
+.app.m-title .stage,.app.m-select .stage{width:min(100%,calc((100dvh - 24px) * 16 / 9))}
+canvas#cv{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.below{width:min(100%,calc((100dvh - 150px) * 16 / 9));display:flex;flex-direction:column;gap:10px;max-width:100%}
+.app.m-title .below,.app.m-select .below{width:min(100%,calc((100dvh - 24px) * 16 / 9))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.btn{font-family:var(--f-ui);font-size:15px;letter-spacing:.02em;background:var(--panel);border:2px solid var(--line);color:var(--text);padding:8px 14px;box-shadow:0 0 0 2px #000,3px 3px 0 2px #000;transition:transform .08s}
+.btn:hover{background:#2a1f2c}
+.btn:active{transform:translate(2px,2px);box-shadow:0 0 0 2px #000,1px 1px 0 2px #000}
+.btn.primary{background:var(--gold);color:#1a1008;border-color:#fff2c8}
+.btn.primary:hover{background:#f3c96c}
+.btn.sm{font-size:13px;padding:5px 9px}
+.btn[aria-pressed="false"]{opacity:.6}
+[hidden]{display:none!important}
+
+/* ---------- Title ---------- */
+.titleUI{position:absolute;left:5.5%;top:8%;max-width:52%;display:flex;flex-direction:column;gap:1.2cqw}
+.eyebrow{font-family:var(--f-ui);font-size:clamp(11px,1.35cqw,16px);letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.titleUI h1{margin:0;font-family:var(--f-title);font-weight:400;font-size:clamp(30px,7.4cqw,92px);line-height:.92;color:#fff4dc;text-shadow:3px 3px 0 #2a1430,0 0 24px rgba(255,190,120,.35);text-wrap:balance}
+.titleUI p{margin:0;font-size:clamp(13px,1.6cqw,19px);line-height:1.45;color:#f6e8d2;text-shadow:2px 2px 0 rgba(20,10,24,.9);max-width:34ch}
+.titleUI .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:.6cqw}
+.titleUI .fine{font-family:var(--f-ui);font-size:clamp(11px,1.1cqw,13px);color:#e8d8c0;opacity:.85;text-shadow:1px 1px 0 #000}
+
+/* ---------- Select ---------- */
+.selectUI{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2cqw;background:linear-gradient(180deg,rgba(10,6,16,.55),rgba(10,6,16,.82));padding:3cqw}
+.selectUI h2{margin:0;font-family:var(--f-title);font-weight:400;font-size:clamp(22px,3.6cqw,44px);color:#fff1d6;text-shadow:2px 2px 0 #2a1430;text-align:center;text-wrap:balance}
+.selectUI .sub{font-family:var(--f-ui);font-size:clamp(11px,1.2cqw,14px);color:var(--muted);text-align:center}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2cqw;width:100%;max-width:96cqw}
+.card{display:flex;flex-direction:column;align-items:stretch;text-align:left;background:var(--panel);border:2px solid var(--line);box-shadow:0 0 0 2px #000,4px 4px 0 2px #000;padding:0;transition:transform .15s}
+.card:hover,.card:focus-visible{transform:translateY(-4px)}
+.card canvas{width:100%;aspect-ratio:4/3;image-rendering:pixelated;display:block;border-bottom:2px solid var(--line)}
+.card .meta{padding:1.1cqw 1.3cqw 1.3cqw;display:flex;flex-direction:column;gap:.35cqw}
+.card .nm{font-family:var(--f-title);font-size:clamp(17px,2.2cqw,28px);color:#fff1d6;line-height:1}
+.card .yr{font-family:var(--f-ui);font-size:clamp(11px,1.15cqw,14px);color:var(--gold)}
+.card .rl{font-size:clamp(12px,1.25cqw,15px);color:#e4d6c0}
+.card .ec{font-family:var(--f-ui);font-size:clamp(10px,1cqw,12px);color:var(--muted)}
+
+/* ---------- Talk ---------- */
+.topbar{position:absolute;left:1.6%;right:1.6%;top:2.4%;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;pointer-events:none}
+.topbar>*{pointer-events:auto}
+.place{font-family:var(--f-ui);font-size:clamp(10px,1.2cqw,14px);color:#f3e6cc;background:rgba(10,6,14,.7);border:1px solid rgba(236,220,182,.35);padding:4px 8px;text-align:center}
+.place b{display:block;color:var(--gold);font-weight:500}
+.tools{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{position:absolute;left:1.6%;bottom:2.4%;font-family:var(--f-ui);font-size:clamp(9px,1cqw,12px);color:#f5e7cd;background:rgba(10,6,14,.72);border:1px solid rgba(236,220,182,.3);padding:3px 7px;display:flex;align-items:center;gap:6px}
+.badge i{width:7px;height:7px;background:var(--coral);display:inline-block;animation:pulse 1.6s steps(2) infinite}
+@keyframes pulse{50%{opacity:.25}}
+.dialog{position:absolute;left:50%;bottom:4.5%;transform:translateX(-50%);width:min(66%,760px);background:var(--panel);border:2px solid var(--line);box-shadow:0 0 0 2px #000,4px 4px 0 2px rgba(0,0,0,.6);padding:20px 18px 14px}
+.dialog .name{position:absolute;top:-15px;left:16px;font-family:var(--f-ui);font-weight:600;font-size:15px;background:var(--gold);color:#1a1008;padding:2px 10px;border:2px solid #fff2c8;box-shadow:0 0 0 2px #000}
+.dialog .you{font-style:italic;color:var(--muted);font-size:13px;margin:0 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dialog .txt{font-family:var(--f-ui);font-size:clamp(14px,1.55cqw,19px);line-height:1.5;min-height:3em;max-height:7.6em;overflow-y:auto;white-space:pre-wrap;color:#fbf2e2}
+.dialog .more{position:absolute;right:12px;bottom:6px;color:var(--gold);font-size:12px;animation:pulse 1s steps(2) infinite}
+.dialog .speak{position:absolute;right:10px;top:-15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--f-body);font-size:14px;background:#1f1724;border:2px solid #5a4a50;color:#f0e2c8;padding:6px 11px;text-align:left;box-shadow:2px 2px 0 #000}
+.chip:hover{border-color:var(--gold);color:#fff}
+.chip.asked{opacity:.55}
+.inrow{display:flex;gap:8px;align-items:stretch}
+.inrow input{flex:1;min-width:0;font-family:var(--f-body);font-size:16px;background:#120d16;color:var(--text);border:2px solid var(--line);padding:10px 12px;box-shadow:0 0 0 2px #000}
+.inrow input::placeholder{color:#8d7f6c}
+.mic.on{background:var(--coral);color:#1a0a06}
+.hint{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+
+/* ---------- Drawer ---------- */
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(440px,94vw);background:var(--parch);color:var(--parch-ink);box-shadow:-6px 0 0 #000,-12px 0 40px rgba(0,0,0,.5);transform:translateX(105%);transition:transform .28s ease;z-index:20;display:flex;flex-direction:column;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+.drawer.open{transform:none}
+.drawer header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:2px solid #c9b48c;padding-right:max(18px,env(safe-area-inset-right,0px))}
+.drawer header h3{margin:0;font-family:var(--f-title);font-weight:400;font-size:24px}
+.drawer .x{font-family:var(--f-ui);background:var(--parch-ink);color:var(--parch);border:0;padding:6px 10px}
+.drawer .body{overflow-y:auto;padding:4px 18px 30px;padding-right:max(18px,env(safe-area-inset-right,0px));line-height:1.55}
+.drawer h4{font-family:var(--f-ui);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#8a3a2a;margin:22px 0 8px}
+.drawer p{margin:0 0 10px}
+.tl{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tl li{display:grid;grid-template-columns:5.2em 1fr;gap:10px}
+.tl b{font-family:var(--f-ui);font-weight:500;color:#8a3a2a;font-variant-numeric:tabular-nums}
+.works{margin:0;padding-left:1.1em}
+.quote{font-style:italic;border-left:3px solid #8a3a2a;padding-left:12px;margin:6px 0 4px}
+.cite{font-family:var(--f-ui);font-size:12px;color:var(--parch-mute)}
+.ecos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.eco{font-family:var(--f-ui);font-size:13px;padding:6px 8px;border:2px dashed #b8a27a;color:#8e7a5e}
+.eco.on{border-style:solid;border-color:#2a1c14;background:#2a1c14;color:var(--parch)}
+.note{font-size:13px;color:var(--parch-mute)}
+.histlist{display:flex;flex-direction:column;gap:12px}
+.histlist .q{font-family:var(--f-ui);font-size:13px;color:#8a3a2a}
+.histlist .a{margin:2px 0 0}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:19}
+
+/* ---------- Narrow screens: UI drops below the stage ---------- */
+@media (max-width:760px){
+  .stage,.app.m-title .stage,.app.m-select .stage,.below,.app.m-title .below,.app.m-select .below{width:100%}
+  .app{justify-content:flex-start}
+  .titleUI{position:static;max-width:none;gap:10px;padding:4px 2px}
+  .titleUI h1{font-size:44px}
+  .titleUI p{font-size:16px}
+  .selectUI{position:static;background:none;padding:4px 0;gap:12px}
+  .cards{grid-template-columns:1fr;gap:12px}
+  .card{flex-direction:row}
+  .card canvas{width:38%;aspect-ratio:1/1;border-bottom:0;border-right:2px solid var(--line);object-fit:cover}
+  .card .meta{padding:10px 12px;gap:4px}
+  .dialog{position:relative;left:auto;bottom:auto;transform:none;width:auto;margin-top:12px}
+  .dialog .txt{max-height:none}
+  .place{display:none}
+  .badge{font-size:9px}
+}
+@media (prefers-reduced-motion:reduce){.card,.drawer{transition:none}.badge i,.dialog .more{animation:none}}
+</style>
+
+<div class="app m-title" id="app">
+  <div class="stage" id="stage">
+    <canvas id="cv" width="640" height="360" aria-label="Escena animada en pixel art"></canvas>
+
+    <div class="topbar" id="topbar" hidden>
+      <button class="btn sm" id="back">← Biblioteca</button>
+      <div class="place" id="place"></div>
+      <div class="tools">
+        <button class="btn sm" id="ecosBtn" title="Temas que has descubierto">Ecos 0/6</button>
+        <button class="btn sm" id="resBtn">Recursos</button>
+        <button class="btn sm" id="histBtn">Historial</button>
+        <button class="btn sm" id="sndBtn" aria-pressed="true" title="Sonido ambiente">Sonido</button>
+      </div>
+    </div>
+    <div class="badge" id="badge" hidden><i></i>Recreación con IA · voz sintética</div>
+  </div>
+
+  <div class="below" id="below">
+    <div class="titleUI" id="titleUI">
+      <div class="eyebrow">Santo Domingo · Ciudad Colonial</div>
+      <h1>Ecos de Quisqueya</h1>
+      <p>Una biblioteca de voces. Cruza la puerta y conversa con quienes soñaron, escribieron y gobernaron la República.</p>
+      <div class="row">
+        <button class="btn primary" id="enter">Entrar a la biblioteca</button>
+      </div>
+      <div class="fine">Personajes recreados con IA a partir de fuentes históricas. Las voces son sintéticas.</div>
+    </div>
+
+    <div class="selectUI" id="selectUI" hidden>
+      <h2>¿Con quién quieres conversar?</h2>
+      <div class="sub">Cada recreación conoce su vida y su época. Pregunta lo que quieras.</div>
+      <div class="cards" id="cards"></div>
+      <button class="btn sm" id="toTitle">← Volver a la calle</button>
+    </div>
+
+    <div class="dialog" id="dialog" hidden>
+      <div class="name" id="dname">Salomé Ureña</div>
+      <button class="btn sm speak" id="voiceBtn" aria-pressed="true" title="Leer en voz alta">Voz</button>
+      <p class="you" id="dyou" hidden></p>
+      <div class="txt" id="dtxt" aria-live="polite"></div>
+      <div class="more" id="dmore" hidden>▼</div>
+    </div>
+
+    <div class="talkctl" id="talkctl" hidden>
+      <div class="chips" id="chips"></div>
+      <form class="inrow" id="form" autocomplete="off" style="margin-top:10px">
+        <input id="q" type="text" maxlength="400" placeholder="Escribe tu pregunta…" aria-label="Tu pregunta">
+        <button type="button" class="btn mic" id="mic" hidden title="Dictar con tu voz">Micrófono</button>
+        <button type="submit" class="btn primary" id="send">Preguntar</button>
+      </form>
+      <div class="hint" id="hint" style="margin-top:6px"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Recursos educativos">
+  <header><h3 id="drTitle">Recursos</h3><button class="x" id="drClose">Cerrar</button></header>
+  <div class="body" id="drBody"></div>
+</aside>
+
+<script>
+(()=>{
+'use strict';
+const W=640,H=360;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ================= utils ================= */
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const hx=h=>{h=h.slice(1);return[parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]};
+const mix=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+const mul=(a,k)=>[a[0]*k,a[1]*k,a[2]*k];
+const css=a=>`rgb(${a[0]|0},${a[1]|0},${a[2]|0})`;
+function hash(x,y){let h=(Math.imul(x|0,374761393)+Math.imul(y|0,668265263))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function vn(x,y){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,s=t=>t*t*(3-2*t);const a=hash(xi,yi),b=hash(xi+1,yi),c=hash(xi,yi+1),d=hash(xi+1,yi+1),u=s(xf),v=s(yf);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+const BAY=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5].map(v=>v/16-.47);
+function pip(p,x,y){let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const[xi,yi]=p[i],[xj,yj]=p[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c}
+let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646};
+
+/* ================= palettes & materials ================= */
+const P={
+ skinS:['#2f1a1e','#58302c','#80493a','#a8684a','#c98a5e','#e2ac7c','#f2cb9e'],
+ skinD:['#3a2226','#6c423e','#9e6a5c','#c48e76','#e0b092','#f2cfb2','#fde6d0'],
+ skinB:['#3a2426','#6a4440','#9c6c5c','#c2907a','#dcb096','#efcdb2','#fbe4cf'],
+ hairD:['#0b0910','#15111b','#211a28','#2e2536','#3e3248','#54465e'],
+ hairW:['#3c3c4c','#62647a','#8c8ea2','#b4b6c4','#d6d8e0','#eff0f4','#ffffff'],
+ dress:['#0d0913','#1a1224','#281a36','#382448','#4b315c','#634274'],
+ lace:['#5a5468','#8c8698','#b7b1c0','#dcd6dc','#f4efee','#fffcf6'],
+ coat:['#08090e','#11131c','#1b1f2c','#272c3e','#363d54','#4a526c'],
+ vest:['#1a070c','#320e16','#4e1820','#6c242a','#8c3436','#aa4a44'],
+ shirt:['#4e4c5a','#7c7a8a','#a8a5b2','#cfcbd2','#ebe7ea','#fcf9f6'],
+ silk:['#050508','#0d0d14','#181822','#262632','#3a3a4a','#5a5a6e'],
+ guay:['#4a4234','#73694f','#9c916f','#c0b58f','#ddd3ae','#f1eacb','#fffbe8'],
+ wood:['#170c0b','#2c1712','#45241a','#613523','#7e482e','#9c5e3a','#bb7a4c'],
+ woodD:['#0c0709','#170e12','#241619','#33201f','#452c27','#5a3a30','#704a3a'],
+ woodL:['#1e120e','#3a2216','#5a3820','#7a502c','#9a6a3a','#ba8a50','#d8aa6c'],
+ brass:['#1e1206','#3e260c','#634018','#8c5e24','#b88634','#deb052','#fbe28c'],
+ wallC:['#221a1e','#3e302e','#5e4a42','#80685a','#a28874','#c2a890','#dcc6aa'],
+ coralW:['#1c1416','#33262a','#4c3a3a','#685246','#866c58','#a4886c','#c2a684'],
+ wallG:['#0f1514','#18221f','#22302b','#2e3f38','#3d5048','#4f645a','#667a6c'],
+ chalkB:['#0a110e','#101b16','#16251d','#1d3025','#263c2f','#30483a'],
+ paper:['#3e3428','#665640','#8e7a5a','#b39e78','#d2c098','#ebdbb4','#fbefd0'],
+ ink:['#120a08','#22140e','#342018','#4a2e20'],
+ night:['#04060d','#080c1a','#0e1528','#16203a','#212e4e','#2e3f64','#40567e'],
+ moon:['#a8b4d8','#d0d8f0','#eef2fc','#ffffff'],
+ flame:['#c2461a','#f07a26','#ffaa3a','#ffd66a','#fff4c0'],
+ glass:['#1a1e26','#2c3440','#465262','#6a7a88','#98a8b0','#c8d4d4'],
+ shutter:['#0c1620','#132634','#1c3a4a','#265060','#356a76','#4a8a8c','#6aa8a0'],
+ leaf:['#08120e','#0f2016','#16321e','#204826','#2e6030','#42783a','#5e924a'],
+ bougain:['#26081e','#4c0e36','#7a164e','#a82266','#cc3a7c','#e86296','#f896b8'],
+ iron:['#07070b','#101016','#1a1a22','#262630','#363642','#4a4a58'],
+ red:['#22060a','#430c12','#6a141a','#921e22','#b82c2a','#d8463a'],
+ blue:['#060c22','#0c1840','#142662','#1e3886','#2c4ea8','#4268c6'],
+ white:['#4a4652','#7a7684','#aaa6b2','#d2cdd4','#eeeaec','#fffcfa'],
+ metal:['#08080a','#121216','#1c1c22','#28282f','#36363f','#4a4a55','#64646f'],
+ lampG:['#06140c','#0c2416','#143822','#1e5030','#2a6a40','#3c8854','#5aa870'],
+ bookR:['#1c0608','#380c10','#561618','#762222','#943230','#b04a40'],
+ bookB:['#060a1a','#0e1630','#162448','#203462','#2e477c','#425e96'],
+ bookG:['#06120c','#0c2216','#143420','#1e482c','#2a5e3a','#3c764c'],
+ bookO:['#1e1206','#3a240c','#5a3a14','#7a521e','#9a6c2c','#b8883e'],
+ bookC:['#2e2820','#4e4434','#70644c','#928466','#b2a482','#cec2a0'],
+ sky:['#130f2c','#1f173f','#312051','#4a285e','#6c3262','#934062','#bb5660','#db7a62','#f0a46e','#fccc8c'],
+ cloud:['#251b46','#3e255a','#633067','#8c406c','#b45a72','#d87e7a','#f2a88a'],
+ farS:['#18112a','#231936','#302242','#3f2c4e','#4f385a','#614566'],
+ ochre:['#24160e','#462a16','#6c4220','#94602c','#b87e3c','#d49c52','#eaba70'],
+ rose:['#2a1418','#4e2228','#76383a','#9c5250','#bc6e66','#d68e80','#ecb09c'],
+ teal:['#0c1a1e','#14303a','#1e4652','#2a5e68','#3a787e','#509494','#70b0a8'],
+ cream:['#2a2420','#4c4238','#726452','#98886e','#baab8c','#d6caa8','#ece2c4'],
+ tile:['#1e0c0a','#3e1810','#622616','#88381e','#aa4e28','#c86a38'],
+ cobble:['#120f16','#1e1a22','#2c2630','#3c343e','#4e444c','#62565c','#7a6c70'],
+ silh:['#06050c','#0b0a14','#120f1e','#1a1528'],
+ warmWin:['#7a3a12','#b86018','#e89028','#fcc050','#ffe48c'],
+ cityL:['#5a4a2a','#a8843c','#f0c060','#fff0b0'],
+ pearl:['#5a5650','#9a968c','#d6d2c6','#f4f0e6'],
+ cameo:['#4a2a22','#8a5a4a','#d8b8a4','#f4e0d0'],
+ wax:['#4a4034','#7a6c58','#aa9a7e','#d0c2a4','#ece0c6','#fff6e4'],
+ chalk:['#7c8a80','#a8b4aa','#d0d8d0','#eef2ee'],
+ trunk:['#1a120e','#2e2018','#463022','#5e4230','#78563e','#94704e'],
+};
+const MATS=[null];
+function mat(ramp,o={}){MATS.push(Object.assign({ramp:ramp.map(hx),dith:.16},o));return MATS.length-1}
+const plaster=(x,y)=>(vn(x/7,y/7)-.5)*.12+(vn(x/37,y/29)-.5)*.14;
+const grainH=(x,y)=>Math.sin(y*.9+vn(x/40,y/3)*5)*.05+(hash(x>>3,y)-.5)*.05;
+const grainV=(x,y)=>Math.sin(x*.9+vn(x/3,y/40)*5)*.05+(hash(x,y>>3)-.5)*.05;
+function blocks(x,y){const bh=13,row=Math.floor(y/bh),off=hash(row,7)*40,bx=x+off,bw=22+Math.floor(hash(row,3)*12),col=Math.floor(bx/bw),u=bx-col*bw,v=y-row*bh;let t=(hash(col,row)-.5)*.2+(vn(x/3,y/3)-.5)*.16;if(u<1||v<1)t-=.32;else if(u<2||v<2)t+=.06;if(hash(x,y)>.94)t-=.18;return t}
+function cobbleT(x,y){const r=Math.floor(y/7),o=(r&1)*6,c=Math.floor((x+o)/12),u=(x+o)-c*12,v=y-r*7;let t=(hash(c,r)-.5)*.22;if(u<1||v<1)t-=.4;else if(u<3&&v<3)t+=.12;return t}
+const M={};
+for(const k of Object.keys(P))M[k]=mat(P[k]);
+MATS[M.wallC].tex=plaster;MATS[M.wallG].tex=plaster;MATS[M.coralW].tex=blocks;
+MATS[M.wood].tex=grainH;MATS[M.woodD].tex=grainH;MATS[M.woodL].tex=grainH;
+MATS[M.ochre].tex=plaster;MATS[M.rose].tex=plaster;MATS[M.teal].tex=plaster;MATS[M.cream].tex=plaster;
+MATS[M.cobble].tex=cobbleT;MATS[M.paper].tex=(x,y)=>(vn(x/5,y/5)-.5)*.1;
+MATS[M.chalkB].tex=(x,y)=>(vn(x/12,y/6)-.5)*.18;
+MATS[M.tile].tex=(x,y)=>-Math.abs((x%7)-3)/3*.22+((y%5)===0?-.25:0);
+MATS[M.trunk].tex=(x,y)=>((y%5)<1?-.3:0)+(hash(x,y)-.5)*.1;
+// emissive / special
+M.skyE=mat(P.sky,{dith:.12,level:(x,y)=>y/300+(vn(x/70,y/20)-.5)*.05});
+M.cloudE=mat(P.cloud,{dith:.14,emissive:true});
+M.nightE=mat(P.night,{dith:.14,level:(x,y)=>.12+(y-30)/260});
+M.moonE=mat(P.moon,{emissive:true,base:.7});
+M.flameE=mat(P.flame,{emissive:true,base:.6});
+M.winE=mat(P.warmWin,{emissive:true,base:.55,tex:(x,y)=>(vn(x/6,y/6)-.5)*.3});
+M.cityE=mat(P.cityL,{emissive:true,base:.5});
+M.silhE=mat(P.silh,{level:()=>.25,dith:.2});
+M.starE=mat(P.moon,{emissive:true,base:.35});
+M.lampGE=mat(P.warmWin,{emissive:true,base:.8});
+M.glassE=mat(P.glass,{emissive:true,base:.62,dith:.2});
+
+/* ================= Layer ================= */
+class Layer{
+  constructor(w=W,h=H,ox=0){this.w=w;this.h=h;this.ox=ox;this.m=new Uint16Array(w*h);this.f=new Float32Array(w*h);this.sx=1;this.sy=1;this.tx=0;this.ty=0;this.id=true}
+  xf(sx,sy,cx,cy){this.sx=sx;this.sy=sy;this.tx=cx;this.ty=cy;this.id=false;return this}
+  fX(x){return this.tx+(x-this.tx)*this.sx}fY(y){return this.ty+(y-this.ty)*this.sy}
+  _set(x,y,m,f){x=x+this.ox;if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;this.m[i]=m;this.f[i]=f}
+  _add(x,y,a){x=x+this.ox;if(x<0||y<0||x>=this.w||y>=this.h)return;const i=y*this.w+x;if(this.m[i])this.f[i]+=a}
+  _blk(x,y,fn){x=Math.floor(x);y=Math.floor(y);if(this.id)return fn(x,y);let x0=Math.floor(this.fX(x)),x1=Math.floor(this.fX(x+1)),y0=Math.floor(this.fY(y)),y1=Math.floor(this.fY(y+1));if(this.sx<1)x1=x0+1;if(this.sy<1)y1=y0+1;x1=Math.max(x1,x0+1);y1=Math.max(y1,y0+1);for(let yy=y0;yy<y1;yy++)for(let xx=x0;xx<x1;xx++)fn(xx,yy)}
+  set(x,y,m,f=0){this._blk(x,y,(a,b)=>this._set(a,b,m,f))}
+  add(x,y,a){this._blk(x,y,(p,q)=>this._add(p,q,a))}
+  fill(x0,y0,x1,y1,inside,m,form){const F=typeof form==='function';
+    if(this.id){x0=Math.floor(x0);y0=Math.floor(y0);x1=Math.ceil(x1);y1=Math.ceil(y1);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(inside(x+.5,y+.5))this._set(x,y,m,F?form(x,y):(form||0));return}
+    const X0=Math.floor(Math.min(this.fX(x0),this.fX(x1+1))),X1=Math.ceil(Math.max(this.fX(x0),this.fX(x1+1))),Y0=Math.floor(Math.min(this.fY(y0),this.fY(y1+1))),Y1=Math.ceil(Math.max(this.fY(y0),this.fY(y1+1)));
+    for(let y=Y0;y<=Y1;y++)for(let x=X0;x<=X1;x++){const sx=this.tx+(x+.5-this.tx)/this.sx,sy=this.ty+(y+.5-this.ty)/this.sy;if(inside(sx,sy))this._set(x,y,m,F?form(Math.floor(sx),Math.floor(sy)):(form||0))}}
+  rect(x,y,w,h,m,form){this.fill(x,y,x+w-1,y+h-1,()=>true,m,form)}
+  ell(cx,cy,rx,ry,m,form){this.fill(cx-rx-1,cy-ry-1,cx+rx+1,cy+ry+1,(x,y)=>{const a=(x-cx)/rx,b=(y-cy)/ry;return a*a+b*b<=1},m,form)}
+  poly(p,m,form){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const[a,b]of p){x0=Math.min(x0,a);x1=Math.max(x1,a);y0=Math.min(y0,b);y1=Math.max(y1,b)}this.fill(x0,y0,x1,y1,(x,y)=>pip(p,x,y),m,form)}
+  line(x0,y0,x1,y1,m,f=0,th=1){const n=Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0)))||1;for(let i=0;i<=n;i++){const x=x0+(x1-x0)*i/n,y=y0+(y1-y0)*i/n;if(th<=1)this.set(Math.round(x),Math.round(y),m,f);else this.ell(x,y,th/2,th/2,m,f)}}
+  sLine(x0,y0,x1,y1,a){const n=Math.ceil(Math.max(Math.abs(x1-x0),Math.abs(y1-y0)))||1;for(let i=0;i<=n;i++)this.add(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),a)}
+  sRect(x,y,w,h,a){for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)this.add(xx,yy,typeof a==='function'?a(xx,yy):a)}
+  sEll(cx,cy,rx,ry,a){for(let y=Math.floor(cy-ry);y<=cy+ry;y++)for(let x=Math.floor(cx-rx);x<=cx+rx;x++){const d=((x-cx)/rx)**2+((y-cy)/ry)**2;if(d<=1)this.add(x,y,a*(1-d*.6))}}
+}
+function bake(L,lights,amb){
+  const c=document.createElement('canvas');c.width=L.w;c.height=L.h;const g=c.getContext('2d');const id=g.createImageData(L.w,L.h),d=id.data;
+  for(let y=0;y<L.h;y++)for(let x=0;x<L.w;x++){const i=y*L.w+x,m=L.m[i];if(!m)continue;const Mt=MATS[m],sx=x-L.ox;let lv;
+    if(Mt.level)lv=Mt.level(sx,y)+L.f[i];
+    else if(Mt.emissive)lv=(Mt.base??.8)+L.f[i];
+    else{lv=amb+L.f[i];for(const l of lights){const dx=sx-l.x,dy=y-l.y,dd=Math.sqrt(dx*dx+dy*dy);if(dd<l.r){const t=1-dd/l.r;lv+=l.i*t*t}}}
+    if(Mt.tex)lv+=Mt.tex(sx,y);
+    lv+=BAY[(y&3)*4+(x&3)]*Mt.dith;
+    const n=Mt.ramp.length,k=clamp(Math.floor(lv*n),0,n-1),col=Mt.ramp[k],o=i*4;d[o]=col[0];d[o+1]=col[1];d[o+2]=col[2];d[o+3]=255}
+  g.putImageData(id,0,0);return c}
+
+/* ================= characters ================= */
+const CX=320,CY=128;
+function sph(cx,cy,rx,ry,k=.18){return(x,y)=>{const nx=(x+.5-cx)/rx,ny=(y+.5-cy)/ry;return(-nx*.55-ny*.45)*k+(1-Math.min(1,nx*nx+ny*ny))*k*.5-k*.15}}
+function faceIn(cx,cy,rx,ry,taper){return(x,y)=>{const nx=(x-cx)/rx,ny=(y-cy)/ry;if(ny<-1||ny>1)return false;let lim=Math.sqrt(Math.max(0,1-ny*ny));if(ny>.2)lim*=1-(ny-.2)*taper;return Math.abs(nx)<=lim}}
+function headFace(L,c){
+  const{cx,cy,rx,ry,skin}=c;
+  const er=c.earR||3.5,eh=c.earH||6;
+  L.ell(cx-rx,cy+3,er,eh,skin,(x,y)=>-.12+(x<cx-rx-1?.06:-.04));L.ell(cx+rx,cy+3,er,eh,skin,(x,y)=>-.2);
+  L.sRect(cx-rx-1,cy+1,1,4,-.22);L.sRect(cx+rx,cy+1,1,4,-.22);
+  L.fill(cx-rx-1,cy-ry-1,cx+rx+1,cy+ry+1,faceIn(cx,cy,rx,ry,c.taper),skin,(x,y)=>{const nx=(x+.5-cx)/rx,ny=(y+.5-cy)/ry;let f=-nx*.13-.03+(1-Math.min(1,nx*nx+ny*ny))*.1;if(ny>.74)f-=.1;if(Math.abs(nx)>.82)f-=.06;return f});
+  // sockets, nose, mouth area
+  L.sRect(cx-12,cy-2,9,4,-.07);L.sRect(cx+4,cy-2,9,4,-.08);
+  for(let y=cy;y<cy+9;y++){L.add(cx+2,y,-.13);L.add(cx-1,y,.06)}
+  L.add(cx,cy+8,.12);L.add(cx-1,cy+8,.06);L.add(cx-2,cy+10,-.3);L.add(cx+2,cy+10,-.3);L.add(cx+1,cy+10,-.1);
+  L.sRect(cx-2,cy+11,5,1,-.08);L.sRect(cx-3,cy+18,7,1,-.08);L.sRect(cx-2,cy+19,5,1,.05);
+  // cheek warmth
+  L.sEll(cx-10,cy+8,4,2.5,.05);L.sEll(cx+10,cy+8,4,2.5,-.02);
+}
+function hands(L,cx,y,skin){
+  L.ell(cx-11,y+2,10,6,skin,(x,yy)=>-.02-(yy-(y+2))/6*.12);
+  L.ell(cx+9,y,10,6,skin,(x,yy)=>.02-(yy-y)/6*.12);
+  for(let i=0;i<4;i++)L.sLine(cx+1+i*3,y-4,cx+3+i*3,y+4,-.16);
+  L.sLine(cx-5,y-3,cx-1,y-5,-.12);L.sLine(cx-18,y+5,cx-4,y+7,-.1);
+}
+function armsStd(L,cx,cloth,skin,cuff,sh=66){
+  for(const s of[-1,1]){
+    L.poly([[cx+s*sh,188],[cx+s*(sh-22),198],[cx+s*(sh-6),286],[cx+s*(sh+28),288]],cloth,(x,y)=>(s<0?.02:-.08)-(Math.abs(x-cx)-sh)/30*.08);
+    L.poly([[cx+s*(sh+30),279],[cx+s*(sh+2),277],[cx+s*22,283],[cx+s*22,298],[cx+s*(sh+30),298]],cloth,(x,y)=>(y<282?.12:0)-.02+(s<0?.03:-.04));
+    L.sLine(cx+s*(sh+4),285,cx+s*(sh+24),289,-.14);L.sLine(cx+s*40,290,cx+s*58,292,-.1);
+    if(cuff)L.rect(Math.min(cx+s*28,cx+s*22),283,7,15,cuff,(x,y)=>((x+y)%3===0?-.12:.06));
+  }
+  hands(L,cx,289,skin);
+}
+const hairF=(cx,cy,rx)=>(x,y)=>-((x-cx)/rx)*.13+.07*Math.sin((x-cx)*1.1+y*.45)+((Math.hypot(x-(cx-5),y-(cy-11))-14)**2<3?.2:0);
+
+function buildSalome(){
+  const b=new Layer().xf(.86,1,CX,300),h=new Layer().xf(1.32,1.32,CX,CY+24),a=new Layer().xf(.86,1,CX,300);const cx=CX,cy=CY,skin=M.skinS,dr=M.dress,la=M.lace;
+  b.rect(cx-10,cy+15,21,22,skin,(x,y)=>-.12-(y<cy+22?.14:0)-(x-cx)/7*.08);
+  const df=(x,y)=>-(x-cx)/70*.18+(y>222?.05*Math.sin((x-cx)*.32):0)+(Math.abs(x-cx)<20&&y<240?.05:0);
+  b.poly([[cx-58,186],[cx-26,cy+40],[cx+26,cy+40],[cx+58,186],[cx+70,300],[cx-70,300]],dr,df);
+  b.ell(cx-55,196,17,15,dr,sph(cx-55,194,17,15,.22));b.ell(cx+55,196,17,15,dr,sph(cx+55,194,17,15,.22));
+  b.sLine(cx-60,190,cx-50,206,-.12);b.sLine(cx+50,190,cx+60,206,-.12);
+  b.rect(cx-9,cy+18,19,14,la,(x,y)=>((x+y)%3===0?-.14:.04)-(x-cx)/9*.06);
+  for(let x=cx-9;x<cx+10;x+=2)b.set(x,cy+17,la,.08);
+  b.poly([[cx-12,cy+32],[cx+12,cy+32],[cx+6,cy+66],[cx,cy+73],[cx-6,cy+66]],la,(x,y)=>((y%4)===0?-.2:0)+((x+y)%5===0?-.1:.05)-(x-cx)/12*.08);
+  b.ell(cx,cy+33,4,3,M.brass,(x,y)=>-(x-cx)*.05-(y-cy-33)*.08);b.ell(cx,cy+33,2,1.5,M.cameo,.1);
+  for(let y=cy+82;y<292;y+=11)b.ell(cx,y,1.4,1.4,M.brass,.12);
+  // head
+  const H=M.hairD,hf=hairF(cx,cy,18);
+  h.ell(cx,cy-5,22,21,H,hf);h.ell(cx,cy-25,8,5,H,hf);
+  headFace(h,{cx,cy,rx:17,ry:23,skin,taper:.55});
+  h.fill(cx-22,cy-29,cx+22,cy+4,(x,y)=>{const nx=(x-cx)/21,ny=(y-(cy-5))/21;if(nx*nx+ny*ny>1)return false;return y<cy-12+Math.pow(Math.abs(x-cx)/17,2)*15},H,hf);
+  h.ell(cx-18,cy-1,6,9,H,hf);h.ell(cx+18,cy-1,6,9,H,hf);
+  for(let y=cy-25;y<cy-12;y++)h.add(cx,y,-.35);
+  h.ell(cx-18,cy+10,1,1.5,M.brass,.15);h.ell(cx+18,cy+10,1,1.5,M.brass,0);
+  armsStd(a,cx,dr,skin,la,64);
+  return{b,h,a,face:{cx,cy,ey:cy+2,by:cy-4,my:cy+15,brow:1,lash:[22,12,16]}}
+}
+function buildDuarte(){
+  const b=new Layer().xf(.86,1,CX,300),h=new Layer().xf(1.32,1.32,CX,CY+24),a=new Layer().xf(.86,1,CX,300);const cx=CX,cy=CY,skin=M.skinD;
+  b.rect(cx-10,cy+15,21,20,skin,(x,y)=>-.14-(y<cy+22?.14:0));
+  b.poly([[cx-76,190],[cx-30,cy+42],[cx+30,cy+42],[cx+76,190],[cx+82,300],[cx-82,300]],M.coat,(x,y)=>-(x-cx)/80*.18);
+  b.ell(cx-66,198,14,12,M.coat,sph(cx-66,196,14,12,.2));b.ell(cx+66,198,14,12,M.coat,sph(cx+66,196,14,12,.2));
+  b.poly([[cx-25,cy+36],[cx+25,cy+36],[cx+30,300],[cx-30,300]],M.vest,(x,y)=>-(x-cx)/30*.15+.04);
+  for(let y=cy+104;y<294;y+=12)b.ell(cx,y,1.5,1.5,M.brass,.15);
+  b.poly([[cx-12,cy+32],[cx+12,cy+32],[cx+5,cy+98],[cx-5,cy+98]],M.shirt,(x,y)=>((x-cx)%3===0?-.08:.04)-(x-cx)/12*.06);
+  b.rect(cx-10,cy+17,21,12,M.shirt,(x,y)=>-(x-cx)/10*.1);
+  b.poly([[cx-11,cy+23],[cx-3,cy+23],[cx-15,cy+11]],M.shirt,.08);b.poly([[cx+11,cy+23],[cx+3,cy+23],[cx+15,cy+11]],M.shirt,-.06);
+  b.rect(cx-11,cy+26,23,7,M.silk,(x,y)=>(y===cy+27?.22:0)-(x-cx)/11*.08);
+  b.ell(cx,cy+31,4,3,M.silk,.15);b.poly([[cx-2,cy+33],[cx-6,cy+44],[cx-1,cy+42]],M.silk,.05);b.poly([[cx+2,cy+33],[cx+6,cy+44],[cx+1,cy+42]],M.silk,-.02);
+  b.poly([[cx-25,cy+36],[cx-38,cy+44],[cx-27,cy+122],[cx-20,cy+120]],M.coat,.14);
+  b.poly([[cx+25,cy+36],[cx+38,cy+44],[cx+27,cy+122],[cx+20,cy+120]],M.coat,.02);
+  b.sLine(cx-38,cy+44,cx-27,cy+122,.12);
+  const H=M.hairD,hf=hairF(cx,cy,19);
+  h.ell(cx,cy-6,21,19,H,hf);
+  headFace(h,{cx,cy,rx:17,ry:24,skin,taper:.5});
+  h.fill(cx-22,cy-30,cx+22,cy,(x,y)=>{const nx=(x-cx)/21,ny=(y-(cy-6))/19;if(nx*nx+ny*ny>1)return false;return y<cy-12+Math.pow((x-cx+6)/22,2)*10},H,hf);
+  h.ell(cx+1,cy-24,15,6,H,hf);h.ell(cx-11,cy-21,7,5,H,hf);h.ell(cx+12,cy-20,7,5,H,hf);h.ell(cx+6,cy-12,8,3,H,hf);
+  h.rect(cx-17,cy-6,3,15,H,-.02);h.rect(cx+15,cy-6,3,15,H,-.1);
+  h.sLine(cx-7,cy-29,cx-8,cy-15,-.35);
+  h.rect(cx-5,cy+11,11,2,H,0);h.set(cx-6,cy+12,H,0);h.set(cx+6,cy+12,H,-.05);
+  armsStd(a,cx,M.coat,skin,M.shirt,70);
+  return{b,h,a,face:{cx,cy,ey:cy+2,by:cy-4,my:cy+15,brow:1,lash:[18,12,16]}}
+}
+function buildBosch(){
+  const b=new Layer().xf(.86,1,CX,300),h=new Layer().xf(1.32,1.32,CX,CY+24),a=new Layer().xf(.86,1,CX,300);const cx=CX,cy=CY,skin=M.skinB,G=M.guay;
+  b.rect(cx-11,cy+14,23,24,skin,(x,y)=>-.12-(y<cy+22?.14:0));
+  b.poly([[cx-70,192],[cx-30,cy+44],[cx+30,cy+44],[cx+70,192],[cx+76,300],[cx-76,300]],G,(x,y)=>-(x-cx)/76*.16);
+  b.ell(cx-62,200,14,12,G,sph(cx-62,198,14,12,.16));b.ell(cx+62,200,14,12,G,sph(cx+62,198,14,12,.16));
+  b.poly([[cx-9,cy+20],[cx+9,cy+20],[cx,cy+48]],skin,(x,y)=>-.08-(y-cy-20)*.004);
+  b.poly([[cx-10,cy+18],[cx-29,cy+44],[cx-15,cy+52],[cx-1,cy+48]],G,.12);
+  b.poly([[cx+10,cy+18],[cx+29,cy+44],[cx+15,cy+52],[cx+1,cy+48]],G,-.02);
+  b.sLine(cx-1,cy+48,cx-15,cy+52,-.25);b.sLine(cx+1,cy+48,cx+15,cy+52,-.25);
+  for(const px of[-38,-30,30,38]){b.sLine(cx+px,cy+58,cx+px+(px<0?-2:2),298,-.2);b.sLine(cx+px+1,cy+58,cx+px+1+(px<0?-2:2),298,.08)}
+  for(const s of[-1,1]){const x0=s<0?cx-54:cx+32;b.rect(x0,232,22,22,G,-.02);b.rect(x0-1,230,24,5,G,.1);b.sRect(x0-1,235,24,1,-.18);b.ell(x0+11,233,1.2,1.2,M.pearl,.2)}
+  for(let y=cy+54;y<292;y+=13)b.ell(cx,y,1.4,1.4,M.pearl,.2);
+  b.sLine(cx,cy+50,cx,296,-.1);
+  const HW=M.hairW,hf=hairF(cx,cy,20);
+  h.ell(cx,cy-4,21,19,HW,hf);
+  headFace(h,{cx,cy,rx:18,ry:24,skin,taper:.42,earR:4.5,earH:7.5});
+  h.fill(cx-20,cy-28,cx+20,cy-12,(x,y)=>{const nx=(x-cx)/20,ny=(y-(cy-5))/21;return nx*nx+ny*ny<=1&&y<cy-18+Math.pow((x-cx)/18,2)*4},HW,hf);
+  h.ell(cx-19,cy-7,5,9,HW,hf);h.ell(cx+19,cy-7,5,9,HW,hf);
+  for(let i=-12;i<=12;i+=4)h.sLine(cx+i,cy-27,cx+i*1.1,cy-19,-.18);
+  h.sLine(cx-9,cy-13,cx+9,cy-13,-.1);h.sLine(cx-7,cy-10,cx+7,cy-10,-.08);
+  h.sLine(cx-5,cy+9,cx-9,cy+17,-.14);h.sLine(cx+5,cy+9,cx+9,cy+17,-.14);
+  h.add(cx-14,cy+1,-.15);h.add(cx-14,cy+3,-.15);h.add(cx+14,cy+1,-.15);h.add(cx+14,cy+3,-.15);
+  h.sLine(cx-12,cy+18,cx-8,cy+22,-.08);h.sLine(cx+12,cy+18,cx+8,cy+22,-.08);
+  armsStd(a,cx,G,skin,null,64);
+  return{b,h,a,face:{cx,cy,ey:cy+2,by:cy-5,my:cy+15,brow:2,lash:[40,28,30]}}
+}
+
+/* ================= scene pieces ================= */
+function table(L,top,m){L.rect(0,top,640,16,m,(x,y)=>(y<top+2?.22:0)+.04);L.rect(0,top+16,640,H-top-16,MATS[m]===MATS[M.woodD]?M.woodD:M.woodD,(x,y)=>(y<top+19?-.25:0)+(y>top+28&&y<top+30?.1:0)+((x%120)<2?-.15:0)-.04)}
+function book(L,x,y,w,h,m){L.rect(x,y,w,h,m,(xx,yy)=>(yy===y?.15:0)-(yy-y)/h*.08);L.rect(x+w-3,y+1,3,h-2,M.paper,.05);L.sRect(x+4,y+2,1,h-4,.15);L.sRect(x+w-14,y+2,1,h-4,.1)}
+function windowNight(L,x,y,w,h,moon){L.rect(x,y,w,h,M.nightE);for(let i=0;i<26;i++){const sx=x+2+Math.floor(hash(i,x)*(w-4)),sy=y+2+Math.floor(hash(x,i)*(h*.6));L.set(sx,sy,M.starE,hash(i,i)*.4)}if(moon)L.ell(moon[0],moon[1],moon[2],moon[2],M.moonE,(xx,yy)=>((xx-moon[0])+(yy-moon[1])>3?-.3:0)+(vn(xx/2,yy/2)-.5)*.3)}
+function palmSil(L,bx,by,hgt,m,lean=10){for(let t=0;t<=1;t+=.01){const x=bx+lean*t*t,y=by-hgt*t;L.ell(x,y,2.2-t,1.2,m)}const tx=bx+lean,ty=by-hgt;for(let k=0;k<8;k++){const a=-Math.PI+k*Math.PI/7+.1;let px=tx,py=ty,ang=a;for(let s=0;s<22;s++){px+=Math.cos(ang)*1.5;py+=Math.sin(ang)*1.5;ang+=(Math.cos(a)>0?.04:-.04);py+=s*.05;L.set(px,py,m);if(s>3&&s%2===0){L.set(px+Math.sin(ang)*2,py+3-s*.02,m);L.set(px-Math.sin(ang)*2,py+3,m)}}}}
+
+/* ================= scenes ================= */
+const SCN={};
+SCN.salome={
+  lights:[{x:170,y:238,r:310,i:.82,glow:[255,186,110],gr:150,fl:.5},{x:545,y:95,r:250,i:.36,glow:[140,170,255],gr:120,fl:0}],amb:.15,
+  bg(L){
+    L.rect(0,0,640,284,M.wallC,(x,y)=>-(y<30?(30-y)/30*.15:0));
+    L.rect(0,206,640,78,M.woodD,(x,y)=>((x%54)<2?-.25:((x%54)<4?.12:0))+(y<210?.2:0)-.06);
+    L.rect(0,203,640,4,M.wood,.12);
+    L.rect(34,50,204,126,M.wood,(x,y)=>(y<53||x<37?.12:-.04));L.rect(40,56,192,114,M.chalkB);
+    L.rect(38,172,196,4,M.wood,.1);for(let i=0;i<4;i++)L.rect(70+i*9,170,6,2,M.chalk,.3);
+    L.sLine(60,140,100,120,.25);L.sLine(100,120,130,128,.25);L.sLine(130,128,170,118,.25);L.sLine(170,118,205,132,.25);L.sLine(60,140,205,132,.15);
+    L.rect(458,28,144,194,M.wood,(x,y)=>(x<462||y<32?.14:-.06));windowNight(L,466,36,128,178,[556,72,11]);
+    palmSil(L,580,214,110,M.silhE,-20);palmSil(L,488,214,70,M.silhE,8);
+    L.rect(529,36,3,178,M.wood,.05);L.rect(466,124,128,3,M.wood,.05);
+    L.rect(428,32,28,188,M.shutter,(x,y)=>((y%5)===0?-.3:((y%5)===1?.1:0))+(x<431?.1:-.05));
+    L.rect(452,218,156,6,M.wood,.18);
+    L.ell(398,70,13,13,M.brass,sph(398,70,13,13,.2));L.ell(398,70,10,10,M.paper,.15);L.sLine(398,70,398,62,-.5);L.sLine(398,70,404,72,-.5);
+    L.sEll(352,205,72,100,-.22);L.sEll(345,215,40,60,-.12);
+  },
+  table(L){table(L,282,M.wood)},
+  props(L){
+    L.ell(170,293,17,5,M.brass,(x,y)=>-(x-170)/17*.15);L.rect(166,268,9,25,M.brass,(x,y)=>-(x-170)/4*.12);
+    L.ell(170,265,13,8,M.brass,sph(170,262,13,8,.25));L.rect(163,253,15,5,M.brass,.05);
+    L.ell(170,236,9,17,M.glassE,(x,y)=>-(Math.abs(x-170)/9)*.3);L.ell(170,240,3,7,M.flameE,(x,y)=>-(Math.abs(x-170))*.12+(y-240)*.02);
+    book(L,430,268,82,12,M.bookR);book(L,436,256,72,12,M.bookB);book(L,433,246,66,10,M.bookO);
+    L.rect(372,276,16,14,M.glass,.05);L.rect(374,272,12,4,M.brass,.1);L.line(381,272,406,228,M.lace,.15);L.poly([[400,240],[408,224],[412,226],[404,244]],M.lace,.2);
+    L.poly([[214,286],[268,284],[270,297],[212,298]],M.paper,.12);for(let y=288;y<296;y+=2)L.sLine(218,y,262,y-1,-.2);
+  },
+  post(g){g.save();g.font='9px "Pixelify Sans",monospace';g.fillStyle='rgba(222,230,220,.78)';g.fillText('Instituto de Señoritas',54,76);g.font='8px "Pixelify Sans",monospace';g.fillStyle='rgba(222,230,220,.6)';g.fillText('3 de noviembre de 1881',54,90);g.fillText('Lección: Geografía',54,104);g.restore()},
+  parts:'motes',
+};
+SCN.duarte={
+  lights:[{x:200,y:236,r:300,i:.9,glow:[255,160,80],gr:170,fl:1},{x:520,y:110,r:150,i:.12,glow:[110,130,210],gr:90,fl:0}],amb:.1,
+  bg(L){
+    L.rect(0,0,640,284,M.coralW,(x,y)=>-(y<40?(40-y)/40*.2:0));
+    L.rect(0,0,640,20,M.woodD,.05);for(let x=20;x<640;x+=90)L.rect(x,20,12,9,M.woodD,(xx,yy)=>(yy>26?-.2:.05));
+    L.rect(48,58,166,108,M.paper,(x,y)=>{const e=Math.min(x-48,213-x,y-58,165-y);return e<4?-.25+(vn(x/3,y/3)-.5)*.3:0});
+    const isl=[[0,.35],[.12,.3],[.25,.25],[.3,.1],[.42,.05],[.55,.12],[.7,.15],[.85,.25],[1,.35],[.95,.5],[.85,.6],[.7,.62],[.6,.75],[.45,.7],[.35,.6],[.28,.55],[.15,.62],[.02,.66],[.1,.55],[.25,.48],[.22,.4],[.05,.43]].map(([u,v])=>[64+u*134,78+v*80]);
+    L.poly(isl,M.paper,-.22);for(let i=0;i<isl.length;i++){const p=isl[i],q=isl[(i+1)%isl.length];L.line(p[0],p[1],q[0],q[1],M.ink,.1)}
+    L.sLine(64+.42*134,78+.3*80,64+.42*134,78+.65*80,-.25);
+    L.ell(170,148,1.5,1.5,M.red,.2);L.line(190,72,200,72,M.ink);L.line(195,67,195,77,M.ink);
+    L.rect(436,46,140,3,M.woodD,.2);for(let i=0;i<5;i++)L.ell(444+i*31,50,2,2,M.brass,.1);
+    const fx=440,fy=52,fw=132,fh=88,fold=(x,y)=>.14*Math.sin((x-fx)*.22)+(y-fy)/fh*-.06;
+    L.rect(fx,fy,fw,fh,M.white,fold);
+    L.rect(fx,fy,58,36,M.blue,fold);L.rect(fx+74,fy,58,36,M.red,fold);L.rect(fx,fy+52,58,36,M.red,fold);L.rect(fx+74,fy+52,58,36,M.blue,fold);
+    L.sEll(372,205,70,110,-.26);
+  },
+  table(L){table(L,282,M.woodD)},
+  props(L){
+    L.ell(200,293,15,4,M.brass,(x,y)=>-(x-200)/15*.15);L.rect(197,282,7,10,M.brass,.05);L.ell(200,281,10,3,M.brass,.12);
+    L.rect(194,250,13,31,M.wax,(x,y)=>-(x-200)/6*.18+.1);L.rect(205,256,2,10,M.wax,.2);L.rect(194,262,1,7,M.wax,.15);
+    L.line(200,250,200,246,M.ink);L.ell(200,241,3,7,M.flameE,(x,y)=>-(Math.abs(x-200))*.14+(y-241)*.03);
+    L.poly([[380,284],[478,282],[482,298],[376,298]],M.paper,.08);
+    L.rect(500,274,14,16,M.glass,-.05);L.line(507,274,530,236,M.lace,.1);L.poly([[524,250],[532,232],[536,234],[528,252]],M.lace,.15);
+    book(L,548,270,70,12,M.bookR);book(L,556,258,58,12,M.bookC);
+  },
+  post(g){g.save();g.font='8px "Pixelify Sans",monospace';g.fillStyle='rgba(58,32,20,.85)';g.fillText('Dios, Patria',392,292);g.fillText('y Libertad',422,297);g.font='7px "Pixelify Sans",monospace';g.fillStyle='rgba(58,32,20,.7)';g.fillText('La Española',98,160);g.restore()},
+  parts:'embers',
+};
+SCN.bosch={
+  lights:[{x:140,y:226,r:310,i:.8,glow:[248,212,140],gr:150,fl:.12},{x:515,y:130,r:230,i:.28,glow:[110,150,255],gr:120,fl:0}],amb:.15,
+  bg(L){
+    L.rect(0,0,640,284,M.wallG);
+    L.rect(14,22,226,262,M.wood,(x,y)=>(x<18||x>235?.08:-.2));
+    const bk=[M.bookR,M.bookB,M.bookG,M.bookO,M.bookC];
+    for(const sy of[68,118,168,218]){L.rect(14,sy,226,5,M.wood,(x,y)=>(y===sy?.2:-.05));let x=20;while(x<232){const w=4+Math.floor(hash(x,sy)*5),hh=30+Math.floor(hash(sy,x)*14);if(hash(x+1,sy)>.9){x+=6;continue}const m=bk[Math.floor(hash(x,sy+1)*5)];L.rect(x,sy-hh,w,hh,m,(xx,yy)=>(xx===x?.12:0)+((yy-(sy-hh))===4?.18:0)-.02);x+=w}}
+    L.rect(416,30,198,204,M.woodL,(x,y)=>(x<420||y<34?.14:-.06));
+    L.rect(424,38,182,188,M.nightE);
+    for(let i=0;i<9;i++){const bx=424+i*22,bh=40+hash(i,3)*90;L.rect(bx,226-bh,18,bh,M.silhE);for(let wy=226-bh+5;wy<222;wy+=7)for(let wx=bx+3;wx<bx+16;wx+=5)if(hash(wx,wy)>.6)L.rect(wx,wy,2,2,M.cityE,hash(wy,wx)*.4-.2)}
+    for(let y=40;y<224;y+=7)L.rect(424,y,182,4,M.cream,(x,yy)=>(yy===y?.2:0)-.05+(x-424)/182*-.06);
+    L.rect(512,38,1,188,M.cream,.1);L.rect(408,232,214,6,M.woodL,.18);
+    L.rect(300,40,48,36,M.woodD,.1);L.rect(304,44,40,28,M.paper,.05);L.sRect(310,50,28,2,-.3);L.sRect(310,56,22,1,-.2);L.sRect(310,60,24,1,-.2);
+    L.sEll(355,205,70,100,-.22);
+  },
+  table(L){table(L,282,M.woodL)},
+  props(L){
+    L.rect(124,286,34,8,M.brass,(x,y)=>(y===286?.2:0)-.04);L.rect(139,244,4,42,M.brass,(x,y)=>-(x-141)*.08);
+    L.poly([[110,236],[172,236],[164,218],[118,218]],M.lampG,(x,y)=>(y<221?.18:0)-(x-141)/30*.1);L.rect(112,236,58,3,M.lampGE,0);
+    L.poly([[440,300],[588,300],[578,262],[452,262]],M.metal,(x,y)=>(y<266?.2:0)-(x-514)/80*.1);
+    for(let r=0;r<3;r++)for(let k=0;k<11;k++)L.ell(462+k*11+r*3,272+r*8,2.5,2,M.metal,.35);
+    L.rect(452,248,126,12,M.metal,(x,y)=>.25-(y-248)/12*.3);L.ell(450,254,4,6,M.metal,.3);L.ell(580,254,4,6,M.metal,.3);
+    L.rect(470,214,90,34,M.paper,.15);for(let y=222;y<244;y+=4)L.sRect(476,y,60+((y*7)%20),1,-.22);
+    L.ell(392,292,16,4,M.white,.1);L.rect(382,274,20,16,M.white,(x,y)=>-(x-392)/10*.18+.05);L.ell(392,274,10,2,M.ink,.2);L.ell(404,282,4,5,M.white,-.05);L.ell(404,282,2,3,M.woodL,-.2);
+    L.poly([[214,286],[268,284],[270,297],[212,298]],M.paper,.1);L.poly([[218,283],[266,281],[268,294],[216,295]],M.paper,.16);
+  },
+  post(g){g.save();g.font='7px "Pixelify Sans",monospace';g.fillStyle='rgba(40,30,22,.85)';g.fillText('Composición social',478,224);g.fillText('dominicana',478,232);g.restore()},
+  parts:'rain',
+};
+
+/* ================= title scene ================= */
+const TITLE={lights:[{x:520,y:250,r:470,i:.32}],amb:.3,lamps:[]};
+function buildTitle(){
+  const far=new Layer(680,H,20),mid=new Layer(680,H,20),near=new Layer(680,H,20);
+  far.rect(-20,0,680,300,M.skyE);
+  for(let y=40;y<175;y++)for(let x=-20;x<660;x++){const n=vn(x/55,y/9)*.7+vn(x/17,y/5)*.3;if(n>.6+(y<80?.1:0)){far.set(x,y,M.cloudE,-.55+(y-40)/135*.75+(n-.6)*1.4)}}
+  for(let i=0;i<70;i++){const x=-20+Math.floor(hash(i,1)*680),y=Math.floor(hash(1,i)*110);if(far.m[(y)*680+x+20]===M.skyE)far.set(x,y,M.starE,hash(i,i)*.5-.1)}
+  for(let x=-20;x<660;x++){const hh=168+Math.sin(x*.05)*4+vn(x/12,1)*10;for(let y=Math.floor(hh);y<300;y++)far.set(x,y,M.farS,-.15)}
+  palmSil(far,30,190,60,M.farS,10);palmSil(far,212,180,44,M.farS,-6);
+  const cx0=470;
+  far.rect(cx0,96,150,200,M.farS,(x,y)=>-.02+(x-cx0)/150*.05);
+  for(let k=0;k<5;k++)far.rect(cx0+4+k*36,90,8,206,M.farS,.08);
+  far.ell(cx0+75,150,24,32,M.farS,-.2);far.rect(cx0+51,150,48,60,M.farS,-.2);
+  far.rect(cx0+112,52,30,50,M.farS,.05);far.ell(cx0+127,52,15,10,M.farS,.05);
+  far.rect(cx0+118,62,6,12,M.silhE);far.rect(cx0+130,62,6,12,M.silhE);far.line(cx0+127,40,cx0+127,30,M.farS,.1);far.line(cx0+123,34,cx0+131,34,M.farS,.1);
+  far.rect(cx0-6,92,162,4,M.farS,.12);
+  // mid: houses
+  const G=290;
+  const houses=[
+    {x0:-20,x1:118,top:128,m:M.ochre,door:[30,58],wins:[[78,176,26,40,true]],lamp:[66,198],bg:[[100,150]]},
+    {x0:118,x1:238,top:152,m:M.rose,door:[188,216],wins:[[134,182,22,36,false],[150,226,0,0,false]]},
+    {x0:238,x1:372,top:112,m:M.teal,door:[290,322],wins:[[258,150,22,32,true],[318,150,22,32,false]],balcony:[250,360,196]},
+    {x0:372,x1:494,top:140,m:M.cream,door:[402,446],wins:[[456,176,22,40,true]],lamp:[386,200]},
+    {x0:494,x1:660,top:124,m:M.coralW,door:[600,628],wins:[[514,170,24,40,true],[560,170,24,40,false]],lamp:[590,196],bg:[[520,140],[570,132]]},
+  ];
+  for(const hs of houses){
+    const{x0,x1,top,m}=hs,w=x1-x0;
+    mid.rect(x0,top,w,G-top,m,(x,y)=>(vn(x/5,y/36)-.5)*.16-(y>262?.12:0)+(x-x0<3?-.12:0));
+    mid.rect(x0-2,top-3,w+4,5,m,(x,y)=>(y===top-3?.25:.08));mid.rect(x0-3,top-10,w+6,7,M.tile,(x,y)=>(y===top-10?.15:0));
+    const[d0,d1]=hs.door,dw=d1-d0,dr=dw/2;
+    mid.rect(d0-3,G-62-3,dw+6,65,m,.12);mid.ell(d0+dr,G-62,dr+3,dr+3,m,.12);
+    mid.rect(d0,G-62,dw,62,M.wood,(x,y)=>((x-d0)%6===0?-.25:0)-.12);mid.ell(d0+dr,G-62,dr,dr,M.wood,(x,y)=>((x-d0)%6===0?-.25:0)-.18);
+    mid.sLine(d0+dr,G-62-dr,d0+dr,G,-.3);mid.ell(d0+dr-4,G-32,1.5,1.5,M.brass,.2);mid.ell(d0+dr+4,G-32,1.5,1.5,M.brass,.2);
+    for(const[wx,wy,ww,wh,lit]of hs.wins){if(!ww)continue;
+      mid.rect(wx-3,wy-3,ww+6,wh+6,m,.14);
+      mid.rect(wx,wy,ww,wh,lit?M.winE:M.night,lit?(x,y)=>-(y-wy)/wh*.2:-.1);
+      for(let bx=wx+2;bx<wx+ww;bx+=4)mid.rect(bx,wy,1,wh,M.iron,.1);
+      mid.rect(wx,wy+Math.floor(wh/2),ww,1,M.iron,.05);
+      mid.rect(wx-ww/2-3,wy,ww/2,wh,M.shutter,(x,y)=>((y-wy)%4===0?-.25:.04));mid.rect(wx+ww+3,wy,ww/2,wh,M.shutter,(x,y)=>((y-wy)%4===0?-.3:-.04));
+      mid.rect(wx-5,wy+wh+3,ww+10,3,m,.2);
+      if(lit)TITLE.lamps.push({x:wx+ww/2,y:wy+wh/2,r:46,i:.0,glow:[255,170,80],gr:34,fl:.2});
+    }
+    if(hs.balcony){const[b0,b1,by]=hs.balcony;mid.rect(b0-4,by-52,b1-b0+8,5,M.tile,.1);mid.rect(b0,by,b1-b0,4,M.wood,.1);mid.rect(b0,by-20,b1-b0,3,M.wood,.15);for(let x=b0+2;x<b1;x+=4)mid.rect(x,by-17,2,17,M.wood,(xx)=>xx%4===0?.1:-.1);for(let x=b0+4;x<b1;x+=24)mid.rect(x,by+4,3,6,M.wood,-.1)}
+    if(hs.lamp){const[lx,ly]=hs.lamp;mid.line(lx-10,ly-6,lx,ly-6,M.iron);mid.line(lx-10,ly-6,lx-10,ly+4,M.iron);mid.rect(lx-3,ly-4,7,2,M.iron,.1);mid.rect(lx-2,ly-2,5,7,M.lampGE,0);mid.rect(lx-3,ly+5,7,2,M.iron,.1);TITLE.lights.push({x:lx,y:ly+2,r:80,i:.45});TITLE.lamps.push({x:lx,y:ly+2,r:80,glow:[255,190,110],gr:52,fl:.35})}
+    for(const[bx,by]of hs.bg||[]){for(let k=0;k<70;k++){const a=hash(k,bx)*Math.PI*2,rr=hash(bx,k)*18,x=bx+Math.cos(a)*rr*1.4,y=by+Math.sin(a)*rr*.7+(hash(k,k)>.7?hash(k,3)*40:0);mid.ell(x,y,2+hash(k,9)*1.5,2,hash(k,by)>.35?M.bougain:M.leaf,(xx,yy)=>.1-(yy-y)*.05+(hash(xx,yy)-.5)*.2)}}
+  }
+  mid.rect(-20,G,680,8,M.cream,(x,y)=>(y===G?.15:-.2)+((x%30)<1?-.25:0));
+  // cat
+  mid.ell(462,G-4,6,4,M.silhE);mid.ell(467,G-10,3,3,M.silhE);mid.set(465,G-14,M.silhE);mid.set(469,G-14,M.silhE);mid.line(456,G-2,451,G-10,M.silhE);
+  // near: street, palm, lamp post, pots
+  near.rect(-20,G+8,680,H-G-8,M.cobble,(x,y)=>(y-G)/70*.18-.05);
+  const pl=(x,y,s)=>{near.poly([[x-8*s,y],[x+8*s,y],[x+6*s,y+14*s],[x-6*s,y+14*s]],M.tile,(xx,yy)=>-(xx-x)/(8*s)*.15);for(let k=0;k<26;k++){const a=-Math.PI*hash(k,x),rr=4+hash(x,k)*12*s;near.ell(x+Math.cos(a)*rr,y+Math.sin(a)*rr*.8,3,2,M.leaf,(xx,yy)=>.15-(yy-y)/20*.2)}};
+  pl(250,282,1);pl(354,284,.9);
+  for(let t=0;t<=1;t+=.004){const x=22+44*t*t,y=372-232*t;near.ell(x,y,6.5-3*t,1.5,M.trunk,(xx,yy)=>-(xx-x)/6*.25+((Math.floor(t*250))%5===0?-.15:0))}
+  const tx=66,ty=140;
+  for(let k=0;k<11;k++){const a=-Math.PI*1.05+k*Math.PI*1.1/10;let px=tx,py=ty,ang=a,dir=Math.cos(a)>0?1:-1;for(let s=0;s<44;s++){px+=Math.cos(ang)*1.6;py+=Math.sin(ang)*1.6;ang+=dir*.035;near.ell(px,py,1.2,1.2,M.leaf,.1);if(s>2&&s%2===0){const ll=Math.max(2,9-s*.12);near.line(px,py,px+Math.cos(ang+1.4*dir)*ll,py+Math.sin(ang+1.4*dir)*ll+3,M.leaf,(s%4?.0:.12));near.line(px,py,px+Math.cos(ang-1.4*dir)*ll,py+Math.sin(ang-1.4*dir)*ll+3,M.leaf,-.1)}}}
+  for(let k=0;k<4;k++)near.ell(62+k*3,146+(k%2)*3,3,3,M.trunk,.15);
+  const lp=608;near.rect(lp-2,190,5,175,M.iron,(x,y)=>-(x-lp)*.06);near.rect(lp-5,350,11,15,M.iron,.05);
+  near.poly([[lp-8,170],[lp+9,170],[lp+5,190],[lp-4,190]],M.iron,.08);near.rect(lp-5,173,11,14,M.lampGE,0);near.rect(lp-10,166,21,4,M.iron,.12);near.ell(lp+1,163,4,3,M.iron,.1);
+  TITLE.lights.push({x:lp,y:180,r:120,i:.6});TITLE.lamps.push({x:lp,y:180,r:120,glow:[255,196,120],gr:80,fl:.25});
+  return{far:bake(far,TITLE.lights,TITLE.amb),mid:bake(mid,TITLE.lights,TITLE.amb),near:bake(near,TITLE.lights,TITLE.amb)};
+}
+
+/* ================= character + scene data ================= */
+const CHARS={
+ salome:{
+  name:'Salomé Ureña',years:'1850 – 1897',role:'Poeta y educadora',place:'Instituto de Señoritas',when:'Santo Domingo · 1881',
+  build:buildSalome,scene:'salome',voice:'airy',rate:.95,blip:560,sysVoice:{pitch:1.2,rate:.95},
+  greet:'[sonrisa] Bienvenida, bienvenido. Acabo de terminar la lección de la tarde y el aula todavía huele a tinta y a tiza. Soy Salomé. ¿Qué te trae a esta casa de estudio?',
+  style:'Hablas con dulzura, serenidad y un registro culto del siglo XIX, con imágenes poéticas breves pero sin exagerar. Eres maestra: explicas con paciencia y te entusiasma que una joven o un joven quiera aprender. Tratas al estudiante de "tú" con cariño.',
+  facts:'Nació en Santo Domingo el 21 de octubre de 1850 y murió allí el 6 de marzo de 1897, enferma de tuberculosis. Hija de Nicolás Ureña de Mendoza, poeta y político. De joven publicó versos con el seudónimo "Herminia". Poemas: "A la patria" (1874), "Ruinas", "La fe en el porvenir", "Sombras", "Anacaona" (poema épico sobre la cacica taína), "Mi Pedro", "El ave y el nido". En 1878 recibió un homenaje público y una medalla de la sociedad Amigos del País; en 1880 esa sociedad publicó sus Poesías. En 1880 se casó con Francisco Henríquez y Carvajal (médico y luego presidente en 1916, después de la muerte de ella). Hijos: Francisco, Pedro, Max y Camila Henríquez Ureña. El 3 de noviembre de 1881 fundó el Instituto de Señoritas, primer centro de educación superior para mujeres del país, con orientación positivista y normalista inspirada en Eugenio María de Hostos. En 1887 se graduaron las primeras seis maestras normales del Instituto. Su poesía es cívica: patria, progreso, ciencia, paz y educación. Sus restos reposan en el Panteón Nacional.',
+  death:1897,
+  suggest:[
+   {q:'¿Por qué fundaste el Instituto de Señoritas?',a:'[apasionado] Porque una patria no se levanta a medias. En 1881 abrimos el Instituto de Señoritas para que las jóvenes dominicanas recibieran una formación seria y científica, no solo labores de adorno. Hostos traía la escuela normal; yo quise que la mujer también fuera maestra de la nación. ¿Crees que hoy esa tarea ya está cumplida?'},
+   {q:'¿Qué significaba la patria en tu poesía?',a:'[serio] La patria era para mí una herida y una esperanza. Escribí «A la patria» y «La fe en el porvenir» en años de guerras y de gobiernos que caían uno tras otro. No quería versos de adorno: quería que la poesía despertara a mi pueblo hacia el trabajo, la ciencia y la concordia.'},
+   {q:'¿Quién era Herminia?',a:'[sonrisa] Herminia fue mi primer nombre de pluma. Siendo muy joven publicaba con ese seudónimo, quizá por pudor, quizá para que juzgaran los versos antes que a la muchacha que los escribía. Con el tiempo firmé con mi propio nombre, y no me arrepiento.'},
+   {q:'Háblame de tus hijos.',a:'[pensativo] Con Francisco Henríquez y Carvajal tuve a Francisco, a Pedro, a Max y a Camila. A Pedro le dediqué versos que llamé «Mi Pedro». Para mí, educar a un hijo y educar a una alumna eran la misma tarea: enseñar a pensar con libertad y a servir a la patria.'},
+  ],
+  topics:[{l:'Herminia',k:['herminia','seudónimo','seudonimo']},{l:'Poesía y patria',k:['poes','poema','verso','a la patria']},{l:'Instituto de Señoritas',k:['instituto','señoritas','senoritas']},{l:'Educación de la mujer',k:['mujer','mujeres','maestra']},{l:'Hostos y la escuela normal',k:['hostos','normal']},{l:'Su familia',k:['pedro','camila','hijos','hijo','esposo','francisco']}],
+  bio:'Poeta de la patria y pionera de la educación femenina. Convirtió el verso en un llamado al progreso y abrió en Santo Domingo el primer centro de estudios superiores para mujeres.',
+  tl:[['1850','Nace en Santo Domingo el 21 de octubre.'],['1874','Publica «A la patria».'],['1878','Recibe un homenaje público y una medalla de la sociedad Amigos del País.'],['1880','Se publican sus Poesías. Se casa con Francisco Henríquez y Carvajal.'],['1881','Funda el Instituto de Señoritas el 3 de noviembre.'],['1887','Se gradúan las primeras maestras normales del Instituto.'],['1897','Muere en Santo Domingo el 6 de marzo.']],
+  works:['«A la patria»','«La fe en el porvenir»','«Ruinas»','«Anacaona», poema épico','«Mi Pedro»'],
+  idea:'Educar a la mujer era, para ella, educar a la nación entera.',ideaLabel:'Idea central',
+  act:'Salomé creía que la patria se construye con escuelas. Elige un problema de tu comunidad y escribe cuatro versos que inviten a resolverlo.',
+  src:['Poesías completas de Salomé Ureña (ediciones dominicanas)','Biblioteca Nacional Pedro Henríquez Ureña','Academia Dominicana de la Historia','Archivo General de la Nación'],
+ },
+ duarte:{
+  name:'Juan Pablo Duarte',years:'1813 – 1876',role:'Fundador de La Trinitaria',place:'La noche de La Trinitaria',when:'Santo Domingo · 1838',
+  build:buildDuarte,scene:'duarte',voice:'rounded',rate:.92,blip:340,sysVoice:{pitch:.9,rate:.92},
+  greet:'[serio] Pase, y cierre bien la puerta. Esta habitación se parece a aquella del 16 de julio de 1838, cuando juramos fundar una patria libre. Soy Juan Pablo Duarte. Pregunte lo que quiera saber: la patria también se construye conversando.',
+  style:'Hablas con solemnidad, idealismo y firmeza, con un español formal del siglo XIX; tratas al estudiante de "usted". Eres reflexivo, austero, sin vanidad; hablas de tus compañeros con respeto y nunca te presentas como héroe. Te importan la justicia, la unidad y la educación del pueblo. Nunca expresas odio hacia el pueblo haitiano: defiendes la soberanía dominicana, no el desprecio a otros.',
+  facts:'Nació en Santo Domingo el 26 de enero de 1813; murió pobre en Caracas, Venezuela, el 15 de julio de 1876. Padres: Juan José Duarte, comerciante español, y Manuela Diez. Hermana: Rosa Duarte, que escribió unos Apuntes sobre su vida. Entre 1822 y 1844 la parte oriental de la isla estuvo bajo el gobierno de Haití. Hacia 1828-1831 viajó y estudió en Estados Unidos y Europa (España, Inglaterra, Francia). El 16 de julio de 1838 fundó la sociedad secreta La Trinitaria con otros jóvenes (entre ellos Juan Isidro Pérez, Pedro Alejandrino Pina, Félix María Ruiz, Juan Nepomuceno Ravelo, Benito González, Felipe Alfau, Jacinto de la Concha y José María Serra), organizada en células de tres; lema "Dios, Patria y Libertad". Luego impulsó La Filantrópica y La Dramática para difundir ideas por el teatro. En 1843, perseguido, partió al exilio. El 27 de febrero de 1844 Francisco del Rosario Sánchez, Matías Ramón Mella y los trinitarios proclamaron la independencia en la Puerta del Conde. Duarte regresó el 14 de marzo de 1844. Ese mismo año, Pedro Santana tomó el poder, lo declaró traidor y lo expulsó con su familia; vivió muchos años en Venezuela, en buena parte retirado en el interior. Redactó un Proyecto de Ley Fundamental (constitución) que afirma la soberanía del pueblo y la independencia "de toda potencia extranjera". En 1864, durante la Guerra de la Restauración contra la anexión a España, regresó para ofrecer sus servicios y fue enviado en misión diplomática a Venezuela. Frases atribuidas: "Sed justos lo primero, si queréis ser felices" y "Vivir sin patria es lo mismo que vivir sin honor". Sus restos fueron traídos a Santo Domingo en 1884.',
+  death:1876,
+  suggest:[
+   {q:'¿Qué fue La Trinitaria?',a:'[apasionado] Fue una sociedad secreta que fundamos el 16 de julio de 1838. Nos organizamos en grupos de tres, de modo que nadie conociera a todos y la causa sobreviviera aunque cayera alguno. Nuestro fin era uno solo: una república libre, soberana e independiente. Nuestro lema lo dice todo: Dios, Patria y Libertad.'},
+   {q:'¿Por qué luchar por la independencia?',a:'[serio] Desde 1822 esta parte de la isla estaba bajo el gobierno de Haití. No hablo con odio hacia ningún pueblo, sino con amor por el nuestro: teníamos lengua, costumbres y una voluntad propias. Un pueblo que no se gobierna a sí mismo vive sin patria, y vivir sin patria es lo mismo que vivir sin honor.'},
+   {q:'¿Qué pasó el 27 de febrero de 1844?',a:'[apasionado] Esa noche, en la Puerta del Conde, Francisco del Rosario Sánchez, Matías Ramón Mella y los trinitarios proclamaron la República Dominicana. Yo estaba en el exilio; regresé en marzo y el pueblo me recibió con un cariño que nunca olvidé. Pero pronto la ambición de otros nos dividió.'},
+   {q:'¿Qué era lo que más temías?',a:'[pensativo] Temía a la ambición más que a cualquier ejército. Una república puede nacer libre y perderse luego en manos de quienes quieran venderla o gobernarla como si fuera su hacienda. Por eso insistí tanto: sed justos lo primero, si queréis ser felices. ¿Qué cree usted que hace justa a una nación?'},
+  ],
+  topics:[{l:'La Trinitaria',k:['trinitaria','trinitarios','sociedad secreta']},{l:'Independencia',k:['independencia','1844','27 de febrero','puerta del conde']},{l:'Exilio',k:['exilio','venezuela','caracas','destierro','expuls']},{l:'Ideario y Constitución',k:['constitución','constitucion','ley fundamental','justos','soberan']},{l:'La Restauración',k:['restauración','restauracion','1864','anexión','anexion']},{l:'Lema y bandera',k:['bandera','lema','dios, patria']}],
+  bio:'Ideólogo de la independencia dominicana. Fundó La Trinitaria, soñó una república soberana y justa, y pasó gran parte de su vida en el exilio.',
+  tl:[['1813','Nace en Santo Domingo el 26 de enero.'],['c. 1828','Viaja y estudia en Estados Unidos y Europa.'],['1838','Funda La Trinitaria el 16 de julio.'],['1843','Perseguido, parte al exilio.'],['1844','Se proclama la República el 27 de febrero; regresa en marzo y luego es expulsado por Pedro Santana.'],['1864','Vuelve durante la Guerra de la Restauración.'],['1876','Muere en Caracas el 15 de julio.']],
+  works:['Proyecto de Ley Fundamental (borrador de constitución)','Juramento y organización de La Trinitaria','Lema: «Dios, Patria y Libertad»','Versos y cartas recogidos por su hermana Rosa Duarte'],
+  idea:'«Sed justos lo primero, si queréis ser felices.»',ideaLabel:'Frase atribuida',
+  act:'La Trinitaria se organizaba en grupos de tres. Forma un trío y debatan: ¿qué valores necesita hoy un grupo que quiera mejorar su comunidad?',
+  src:['Instituto Duartiano','Apuntes de Rosa Duarte','Archivo General de la Nación','Academia Dominicana de la Historia'],
+ },
+ bosch:{
+  name:'Juan Bosch',years:'1909 – 2001',role:'Escritor, maestro político y presidente',place:'Estudio del escritor',when:'Santo Domingo · años 70',
+  build:buildBosch,scene:'bosch',voice:'glassy',rate:1,blip:250,sysVoice:{pitch:.8,rate:1},
+  greet:'[sonrisa] Siéntese, siéntese. Estaba terminando unas páginas en la máquina de escribir. Yo soy Juan Bosch. En este cuarto uno escribe cuentos y también trata de explicar este país. ¿Por dónde quiere que empecemos?',
+  style:'Hablas de forma directa, clara y didáctica, como un maestro que explica con ejemplos sencillos de la vida campesina y popular; a veces con humor seco. Tratas al estudiante de "usted". Te gusta explicar la historia por las clases sociales y la economía, y animas a leer y a pensar con cabeza propia. Eres respetuoso incluso con tus adversarios políticos.',
+  facts:'Nació en La Vega el 30 de junio de 1909; murió en Santo Domingo el 1 de noviembre de 2001. Cuentista y novelista: "Camino real" (cuentos, 1933), "La Mañosa" (novela, 1936), cuentos como "La mujer" y "Dos pesos de agua"; "Apuntes sobre el arte de escribir cuentos" (1958). En 1938 se exilió para no colaborar con la dictadura de Rafael Leónidas Trujillo; vivió en Puerto Rico, Cuba, Venezuela y Costa Rica, entre otros. En Puerto Rico trabajó en la edición de las obras de Eugenio María de Hostos. En 1939, en La Habana, participó en la fundación del Partido Revolucionario Dominicano (PRD). Escribió "Trujillo: causas de una tiranía sin ejemplo" (1959). Regresó en octubre de 1961, tras la muerte de Trujillo. Ganó las elecciones del 20 de diciembre de 1962 y asumió el 27 de febrero de 1963; promulgó la Constitución de 1963, con amplios derechos sociales y libertades. Fue derrocado por un golpe de Estado el 25 de septiembre de 1963. En abril de 1965 estalló la revolución constitucionalista que pedía su regreso y la vuelta a la Constitución de 1963 (con Francisco Alberto Caamaño); siguió la intervención militar de Estados Unidos. Perdió las elecciones de 1966 frente a Joaquín Balaguer. Escribió "Crisis de la democracia de América en la República Dominicana" (1964), "Composición social dominicana" (1970) y "De Cristóbal Colón a Fidel Castro: el Caribe, frontera imperial" (1970). Fundó el Partido de la Liberación Dominicana (PLD) el 15 de diciembre de 1973. Fue candidato presidencial también en 1978, 1982, 1986, 1990 y 1994.',
+  death:2001,
+  suggest:[
+   {q:'¿Cómo se escribe un buen cuento?',a:'[apasionado] El cuento es como una flecha: tiene que salir disparada desde la primera línea hacia un solo blanco. No hay tiempo para adornos. Lo expliqué en mis «Apuntes sobre el arte de escribir cuentos»: el cuentista debe saber desde el principio adónde va. Yo aprendí mirando a los campesinos de La Vega, su gente y su manera de hablar.'},
+   {q:'¿Por qué viviste tanto tiempo en el exilio?',a:'[serio] Porque en mi país mandaba Rafael Leónidas Trujillo y yo no estaba dispuesto a servirle. Salí en 1938 y pasé más de veinte años fuera: Puerto Rico, Cuba, Venezuela, Costa Rica. En La Habana ayudé a fundar el Partido Revolucionario Dominicano en 1939. Volví en 1961, después de la muerte del tirano.'},
+   {q:'¿Qué pasó durante tu gobierno?',a:'[serio] Gané las elecciones de diciembre de 1962 y juré el 27 de febrero de 1963. Hicimos una Constitución nueva, con derechos para los trabajadores y libertades públicas. Siete meses después, el 25 de septiembre, un golpe de Estado me sacó del poder. Aprendí que la democracia necesita más que votos: necesita un pueblo organizado y consciente.'},
+   {q:'¿Qué es «Composición social dominicana»?',a:'[pensativo] Es un libro que publiqué en 1970 para explicar nuestra historia desde las clases sociales: quién producía, quién mandaba y quién se quedaba con la riqueza. Si uno no entiende cómo está hecha una sociedad, no puede transformarla. Antes que político, yo quise ser maestro de mi pueblo. ¿Usted ha pensado cómo está compuesta su comunidad?'},
+  ],
+  topics:[{l:'Cuentos y literatura',k:['cuento','literatura','novela','escribir']},{l:'Exilio',k:['exilio','cuba','puerto rico','venezuela','costa rica']},{l:'Gobierno de 1963',k:['1963','presidente','constitución','constitucion','gobierno']},{l:'Golpe de Estado',k:['golpe']},{l:'Revolución de 1965',k:['1965','constitucionalista','caamaño','caamano','intervención','intervencion']},{l:'PRD y PLD',k:['prd','pld','partido']}],
+  bio:'Uno de los grandes cuentistas de América Latina y una figura central de la democracia dominicana. Primer presidente elegido libremente tras la dictadura de Trujillo.',
+  tl:[['1909','Nace en La Vega el 30 de junio.'],['1933','Publica «Camino real», su primer libro de cuentos.'],['1936','Publica la novela «La Mañosa».'],['1938','Parte al exilio durante la dictadura de Trujillo.'],['1939','Participa en La Habana en la fundación del PRD.'],['1961','Regresa al país tras la muerte de Trujillo.'],['1963','Presidente desde el 27 de febrero; derrocado el 25 de septiembre.'],['1973','Funda el Partido de la Liberación Dominicana.'],['2001','Muere en Santo Domingo el 1 de noviembre.']],
+  works:['«Camino real» (1933)','«La Mañosa» (1936)','«Apuntes sobre el arte de escribir cuentos» (1958)','«Trujillo: causas de una tiranía sin ejemplo» (1959)','«Crisis de la democracia de América en la República Dominicana» (1964)','«Composición social dominicana» (1970)','«De Cristóbal Colón a Fidel Castro» (1970)'],
+  idea:'Para transformar una sociedad hay que entender primero cómo está hecha.',ideaLabel:'Idea central',
+  act:'Escribe un cuento de una página sobre alguien de tu barrio. Regla de Bosch: desde la primera línea, el cuento ya debe empujar hacia su final.',
+  src:['Fundación Juan Bosch','Obras completas de Juan Bosch','Archivo General de la Nación','Academia Dominicana de la Historia'],
+ },
+};
+const ORDER=['salome','duarte','bosch'];
+
+/* ================= state ================= */
+const state={mode:'title',cur:null,mx:0,my:0,t:0};
+const caps={sample:null,tts:null,dict:null};
+let title=null,sceneC=null,charC={},parts=[];
+let sndOn=true,voiceOn=true;
+const store={get(k,d){try{const v=localStorage.getItem('ecos.'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('ecos.'+k,JSON.stringify(v))}catch(e){}}};
+const found=store.get('found',{salome:[],duarte:[],bosch:[]});
+const hist={salome:[],duarte:[],bosch:[]};
+
+/* ================= character baking ================= */
+const geo={};
+function getGeo(id){return geo[id]||(geo[id]=CHARS[id].build())}
+function bakeChar(id,lights,amb){
+  const g=getGeo(id);const r={body:bake(g.b,lights,amb),head:bake(g.h,lights,amb),arms:bake(g.a,lights,amb),face:g.face};
+  const hc=r.head.getContext('2d');const smp=(x,y)=>{const d=hc.getImageData(x,y,1,1).data;return[d[0],d[1],d[2]]};
+  const f0=g.face,L=g.h,Y=v=>Math.round(L.fY(v)),eo=Math.round(8*L.sx);
+  const f={...f0,ey:Y(f0.ey),by:Y(f0.by),my:Y(f0.my),eo,hy:Y(f0.cy-21)};r.face=f;
+  const sL=smp(f.cx-eo,f.ey+5),sR=smp(f.cx+eo,f.ey+5),sM=smp(f.cx-7,f.my),hair=smp(f.cx-4,f.hy);
+  const lash=f.lash;
+  r.col={sL,sR,sM,hair,lash,white:mix(mul(sL,1.15),[236,228,214],.4),iris:mix(mul(sL,.25),[44,24,18],.6),lipD:mix(mul(sM,.5),[96,30,36],.35),lipL:mix(sM,[206,120,112],.28),teeth:mix(sM,[240,232,220],.55),inner:mix(mul(sM,.3),[40,10,14],.5)};
+  return r;
+}
+
+/* ================= face overlay ================= */
+const EX={neutral:{raise:0,inner:0,open:1,mouth:'n',dx:0,dy:0,look:0},sonrisa:{raise:1,inner:0,open:1,mouth:'s',dx:0,dy:0,look:0,emote:'note'},pensativo:{raise:0,inner:-1,open:.6,mouth:'n',dx:-1,dy:0,look:-1,emote:'dots'},serio:{raise:0,inner:1,open:.6,mouth:'f',dx:0,dy:1,look:0},apasionado:{raise:1,inner:-1,open:1,mouth:'o',dx:0,dy:-1,look:0,emote:'bang'}};
+const anim={expr:'neutral',nextBlink:2,blinkUntil:0,look:0,lookUntil:0,emote:null,emoteT:0,talkUntil:0,speaking:false,revealing:false,thinking:false};
+function R(c,x,y,w,h,col){c.fillStyle=css(col);c.fillRect(x,y,w,h)}
+function drawFace(c,C,ox,oy,t){
+  const f=C.face,col=C.col,e=EX[anim.expr]||EX.neutral;
+  const blink=t<anim.blinkUntil;const look=t<anim.lookUntil?anim.look:e.look;
+  for(const s of[-1,1]){
+    const ex=f.cx+s*f.eo+ox,ey=f.ey+oy,sk=s<0?col.sL:col.sR,lid=mul(sk,.74),lash=col.lash;
+    if(blink){R(c,ex-2,ey-1,5,1,lid);R(c,ex-2,ey,5,1,lash);}
+    else{R(c,ex-2,ey-1,5,2,col.white);R(c,ex-1+look,ey-1,2,2,col.iris);R(c,ex-1+look,ey-1,1,1,mix(col.iris,[255,255,255],.35));
+      if(e.open<.5)R(c,ex-2,ey-1,5,1,lid);
+      R(c,ex-3,ey-2,6,1,lash);R(c,s<0?ex-3:ex+3,ey-1,1,1,lash);R(c,ex-2,ey+1,4,1,mul(sk,.86))}
+    const by=f.by+oy-e.raise,inner=e.inner;const xo=s<0?ex-3:ex+3,xi=s<0?ex+3:ex-3;
+    const bc=mix(col.hair,col.lash,.3);
+    for(let i=0;i<=6;i++){const x=Math.round(xo+(xi-xo)*i/6),y=Math.round(by+(inner*i/6));R(c,x,y,1,f.brow,bc)}
+  }
+  const mx=f.cx+ox,my=f.my+oy;
+  const talking=anim.revealing||anim.speaking;
+  let shape=e.mouth;
+  if(talking){const k=Math.floor(t*11+Math.sin(t*3.1)*2)%4;shape=['o1','o2','o1',e.mouth==='s'?'s':'n'][k<0?0:k]}
+  if(shape==='n'){R(c,mx-3,my,7,1,col.lipD);R(c,mx-2,my+1,5,1,col.lipL)}
+  else if(shape==='s'){R(c,mx-2,my,5,1,col.lipD);R(c,mx-3,my-1,1,1,col.lipD);R(c,mx+3,my-1,1,1,col.lipD);R(c,mx-2,my+1,5,1,col.lipL)}
+  else if(shape==='f'){R(c,mx-3,my,7,1,col.lipD);R(c,mx-4,my+1,1,1,col.lipD);R(c,mx+4,my+1,1,1,col.lipD)}
+  else if(shape==='o1'){R(c,mx-2,my,5,2,col.inner);R(c,mx-2,my+2,5,1,col.lipL)}
+  else if(shape==='o2'||shape==='o'){R(c,mx-2,my-1,5,3,col.inner);R(c,mx-1,my-1,3,1,col.teeth);R(c,mx-2,my+2,5,1,col.lipL);R(c,mx-3,my,1,1,col.lipD);R(c,mx+3,my,1,1,col.lipD)}
+}
+const ICON={dots:['.......','.......','.......','.#.#.#.','.......'],bang:['...#...','...#...','...#...','.......','...#...'],note:['...##..','...#.#.','...#...','.##....','.##....'],q:['..##...','....#..','...#...','.......','...#...']};
+function drawEmote(c,x,y,icon,t){
+  R(c,x-1,y-1,11,9,[14,10,18]);R(c,x,y,9,7,[250,242,226]);R(c,x+1,y+8,2,1,[14,10,18]);R(c,x+1,y+7,2,1,[250,242,226]);
+  const b=ICON[icon];if(!b)return;for(let j=0;j<5;j++)for(let i=0;i<7;i++)if(b[j][i]==='#'){if(icon==='dots'&&Math.floor(t*3)%4<=Math.floor(i/2)-1)continue;R(c,x+1+i,y+1+j,1,1,[34,22,30])}
+}
+
+/* ================= particles ================= */
+function initParts(kind){parts=[];const n=RM?10:kind==='rain'?70:40;for(let i=0;i<n;i++)parts.push(newPart(kind,true))}
+function newPart(kind,init){
+  if(kind==='motes')return{k:kind,x:380+Math.random()*230,y:init?40+Math.random()*240:280,vx:-.05-Math.random()*.08,vy:-.06-Math.random()*.08,a:.2+Math.random()*.4,ph:Math.random()*6};
+  if(kind==='embers')return{k:kind,x:200+(Math.random()-.5)*4,y:init?120+Math.random()*120:240,vx:(Math.random()-.5)*.2,vy:-.25-Math.random()*.35,a:.9,ph:Math.random()*6,life:init?Math.random():1};
+  if(kind==='rain')return{k:kind,x:426+Math.random()*178,y:init?40+Math.random()*184:40,vy:3+Math.random()*2,a:.25+Math.random()*.3};
+  if(kind==='steam')return{k:kind,x:392+(Math.random()-.5)*6,y:270,vy:-.15-Math.random()*.1,ph:Math.random()*6,life:1};
+  if(kind==='fly')return{k:kind,x:Math.random()*640,y:180+Math.random()*150,ph:Math.random()*6,sp:.3+Math.random()*.4};
+  if(kind==='petal')return{k:kind,x:init?Math.random()*640:Math.random()*700-30,y:init?Math.random()*360:-5,vx:.25+Math.random()*.3,vy:.25+Math.random()*.25,ph:Math.random()*6};
+}
+function stepDraw(c,t,dt){
+  for(let i=0;i<parts.length;i++){const p=parts[i];
+    if(p.k==='motes'){p.x+=p.vx+Math.sin(t+p.ph)*.05;p.y+=p.vy;if(p.y<36||p.x<370)parts[i]=newPart('motes');c.fillStyle=`rgba(190,210,255,${p.a*(.6+.4*Math.sin(t*2+p.ph))})`;c.fillRect(p.x|0,p.y|0,1,1)}
+    else if(p.k==='embers'){p.x+=p.vx+Math.sin(t*3+p.ph)*.15;p.y+=p.vy;p.life-=.006;if(p.life<=0||p.y<20)parts[i]=newPart('embers');c.fillStyle=`rgba(255,${150+Math.random()*60|0},70,${p.life*.8})`;c.fillRect(p.x|0,p.y|0,1,1)}
+    else if(p.k==='rain'){p.y+=p.vy;if(p.y>224)parts[i]=newPart('rain');const yy=p.y|0;if((yy-40)%7>=4){c.fillStyle=`rgba(170,190,240,${p.a})`;c.fillRect(p.x|0,yy,1,3)}}
+    else if(p.k==='steam'){p.y+=p.vy;p.x+=Math.sin(t*1.5+p.ph)*.12;p.life-=.004;if(p.life<=0)parts[i]=newPart('steam');c.fillStyle=`rgba(230,230,240,${p.life*.25})`;c.fillRect(p.x|0,p.y|0,1,1)}
+    else if(p.k==='fly'){const a=(Math.sin(t*2.2+p.ph)+1)/2;p.x+=Math.cos(t*.7+p.ph)*p.sp;p.y+=Math.sin(t*.9+p.ph*2)*p.sp*.6;if(p.x<-10)p.x=650;if(p.x>650)p.x=-10;c.fillStyle=`rgba(255,240,140,${a*.9})`;c.fillRect(p.x|0,p.y|0,1,1);if(a>.7){c.fillStyle=`rgba(255,230,120,${(a-.7)*.6})`;c.fillRect((p.x|0)-1,(p.y|0)-1,3,3)}}
+    else if(p.k==='petal'){p.x+=p.vx+Math.sin(t*1.3+p.ph)*.3;p.y+=p.vy;if(p.y>365)parts[i]=newPart('petal');c.fillStyle='rgba(232,98,150,.9)';c.fillRect(p.x|0,p.y|0,2,1);c.fillStyle='rgba(170,30,90,.9)';c.fillRect((p.x|0)+1,(p.y|0)+1,1,1)}
+  }
+}
+let extra=[];
+function glow(c,l,t,k=1){const fl=l.fl?1+(Math.sin(t*9.1)*.5+Math.sin(t*23.7)*.3+Math.sin(t*3.3)*.4)*l.fl*.15:1;const r=(l.gr||l.r*.5)*fl;const g=c.createRadialGradient(l.x,l.y,0,l.x,l.y,r);const[a,b,cc]=l.glow;g.addColorStop(0,`rgba(${a},${b},${cc},${.32*k*fl})`);g.addColorStop(.4,`rgba(${a},${b},${cc},${.12*k*fl})`);g.addColorStop(1,`rgba(${a},${b},${cc},0)`);c.fillStyle=g;c.fillRect(l.x-r,l.y-r,r*2,r*2)}
+const vig=(()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const gr=g.createRadialGradient(W/2,H*.45,H*.35,W/2,H*.5,W*.62);gr.addColorStop(0,'rgba(8,4,14,0)');gr.addColorStop(1,'rgba(8,4,14,.62)');g.fillStyle=gr;g.fillRect(0,0,W,H);return c})();
+
+/* ================= render loop ================= */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;state.t+=dt;const t=state.t;
+  ctx.globalCompositeOperation='source-over';
+  if(state.mode==='title'||state.mode==='select'){
+    if(!title){requestAnimationFrame(frame);return}
+    const drift=RM?0:Math.sin(t*.15)*4;const px=state.mx*8+drift,py=state.my*3;
+    ctx.fillStyle='#130f2c';ctx.fillRect(0,0,W,H);
+    ctx.drawImage(title.far,Math.round(-20+px*.25),Math.round(py*.2));
+    ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<70;i++){const x=-20+Math.floor(hash(i,1)*680)+Math.round(px*.25),y=Math.floor(hash(1,i)*110);const a=(Math.sin(t*(1+hash(i,4)*2)+i)+1)/2;if(a>.85){ctx.fillStyle=`rgba(255,250,230,${(a-.85)*3})`;ctx.fillRect(x,y,1,1)}}
+    ctx.globalCompositeOperation='source-over';
+    ctx.drawImage(title.mid,Math.round(-20+px*.6),Math.round(py*.5));
+    ctx.drawImage(title.near,Math.round(-20+px),Math.round(py));
+    ctx.globalCompositeOperation='lighter';
+    for(const l of TITLE.lamps){const o=l.x>590?px:px*.6;glow(ctx,{...l,x:l.x+o},t,.9)}
+    const g=ctx.createLinearGradient(0,200,0,300);g.addColorStop(0,'rgba(255,140,90,0)');g.addColorStop(1,'rgba(255,120,80,.10)');ctx.fillStyle=g;ctx.fillRect(0,200,W,100);
+    ctx.globalCompositeOperation='source-over';
+    stepDraw(ctx,t,dt);
+    ctx.drawImage(vig,0,0);
+  } else if(state.mode==='talk'&&sceneC){
+    const S=SCN[CHARS[state.cur].scene],C=charC[state.cur],e=EX[anim.expr]||EX.neutral;
+    if(t>anim.nextBlink){anim.blinkUntil=t+.12;anim.nextBlink=t+2+Math.random()*3.5;if(Math.random()<.18)anim.nextBlink=t+.3}
+    if(!anim.revealing&&!anim.speaking&&!anim.thinking&&Math.random()<.002){anim.look=Math.random()<.5?-1:1;anim.lookUntil=t+1+Math.random()}
+    const br=Math.sin(t*1.7)>.55?1:0;
+    const talking=anim.revealing||anim.speaking;
+    const bob=talking&&Math.sin(t*6.3)>.75?1:0;
+    const hx0=e.dx,hy0=e.dy-br+bob;
+    ctx.drawImage(sceneC.bg,0,0);
+    ctx.drawImage(C.body,0,-br+(e.dy>0?1:0));
+    ctx.drawImage(C.head,hx0,hy0);
+    drawFace(ctx,C,hx0,hy0,t);
+    ctx.drawImage(sceneC.table,0,0);
+    ctx.drawImage(C.arms,0,0);
+    ctx.drawImage(sceneC.props,0,0);
+    stepDraw(ctx,t,dt);
+    if(extra.length){const old=parts;parts=extra;stepDraw(ctx,t,dt);parts=old}
+    ctx.globalCompositeOperation='lighter';for(const l of S.lights)glow(ctx,l,t);ctx.globalCompositeOperation='source-over';
+    ctx.drawImage(vig,0,0);
+    const em=anim.thinking?'dots':(t<anim.emoteT?anim.emote:null);
+    if(em)drawEmote(ctx,CX+24+hx0,CY-58+hy0,em,t);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ================= audio ================= */
+let AC=null,amb=null;
+function audioInit(){if(AC)return;try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){AC=null}}
+function noiseBuf(){const b=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return b}
+function stopAmb(){if(amb){amb.nodes.forEach(n=>{try{n.stop&&n.stop()}catch(e){}});clearInterval(amb.iv);amb.out.disconnect();amb=null}}
+function startAmb(kind){
+  stopAmb();if(!AC||!sndOn)return;if(AC.state==='suspended')AC.resume();
+  const out=AC.createGain();out.gain.value=0;out.connect(AC.destination);out.gain.linearRampToValueAtTime(1,AC.currentTime+1.5);
+  const src=AC.createBufferSource();src.buffer=noiseBuf();src.loop=true;const f=AC.createBiquadFilter();const g=AC.createGain();
+  if(kind==='bosch'){f.type='bandpass';f.frequency.value=1800;f.Q.value=.4;g.gain.value=.05}else if(kind==='duarte'){f.type='lowpass';f.frequency.value=380;g.gain.value=.035}else{f.type='lowpass';f.frequency.value=520;g.gain.value=.025}
+  src.connect(f);f.connect(g);g.connect(out);src.start();
+  const nodes=[src];
+  const chirp=(fr,dur,vol)=>{const o=AC.createOscillator(),gg=AC.createGain(),now=AC.currentTime;o.type='sine';o.frequency.value=fr;gg.gain.setValueAtTime(0,now);for(let k=0;k<3;k++){gg.gain.linearRampToValueAtTime(vol,now+k*dur*2+.005);gg.gain.linearRampToValueAtTime(0,now+k*dur*2+dur)}o.connect(gg);gg.connect(out);o.start(now);o.stop(now+dur*7)};
+  const click=(vol,fr)=>{const s=AC.createBufferSource();s.buffer=noiseBuf();const bf=AC.createBiquadFilter();bf.type='bandpass';bf.frequency.value=fr;const gg=AC.createGain(),now=AC.currentTime;gg.gain.setValueAtTime(vol,now);gg.gain.exponentialRampToValueAtTime(.0001,now+.05);s.connect(bf);bf.connect(gg);gg.connect(out);s.start(now);s.stop(now+.06)};
+  let n=0;const iv=setInterval(()=>{n++;
+    if(kind==='title'||kind==='salome'){if(Math.random()<.5)chirp(4300+Math.random()*500,.03,.012)}
+    if(kind==='salome'&&n%4===0)click(.05,2600);
+    if(kind==='duarte'&&Math.random()<.35)click(.03+Math.random()*.04,900+Math.random()*1500);
+    if(kind==='bosch'&&Math.random()<.2)click(.02,4000);
+  },250);
+  amb={out,nodes,iv};
+}
+function blip(fr){if(!AC||!sndOn)return;const o=AC.createOscillator(),g=AC.createGain(),now=AC.currentTime;o.type='square';o.frequency.value=fr*(.95+Math.random()*.1);g.gain.setValueAtTime(.018,now);g.gain.exponentialRampToValueAtTime(.0001,now+.05);o.connect(g);g.connect(AC.destination);o.start(now);o.stop(now+.06)}
+
+/* ================= UI refs ================= */
+const $=id=>document.getElementById(id);
+const app=$('app'),stage=$('stage'),below=$('below');
+const titleUI=$('titleUI'),selectUI=$('selectUI'),dialog=$('dialog'),talkctl=$('talkctl'),topbar=$('topbar'),badge=$('badge');
+const dname=$('dname'),dtxt=$('dtxt'),dyou=$('dyou'),dmore=$('dmore');
+const narrowMQ=matchMedia('(max-width:760px)');
+function placeUI(){const n=narrowMQ.matches;
+  if(n){below.prepend(dialog);below.prepend(selectUI);below.prepend(titleUI)}
+  else{stage.appendChild(titleUI);stage.appendChild(selectUI);stage.appendChild(dialog)}
+  below.appendChild(talkctl)}
+narrowMQ.addEventListener?narrowMQ.addEventListener('change',placeUI):narrowMQ.addListener(placeUI);
+placeUI();
+
+function setMode(m){state.mode=m;app.className='app m-'+m;titleUI.hidden=m!=='title';selectUI.hidden=m!=='select';const tk=m==='talk';dialog.hidden=!tk;talkctl.hidden=!tk;topbar.hidden=!tk;badge.hidden=!tk;
+  if(m!=='talk'){initParts('fly');extra=[];for(let i=0;i<(RM?4:14);i++)extra.push(newPart('petal',true));parts=parts.concat(extra);extra=[]}}
+
+stage.addEventListener('pointermove',e=>{const r=stage.getBoundingClientRect();state.mx=((e.clientX-r.left)/r.width-.5)*-2;state.my=((e.clientY-r.top)/r.height-.5)*-2});
+
+/* ================= select cards ================= */
+function buildCards(){
+  const wrap=$('cards');wrap.innerHTML='';
+  const pl=[{x:250,y:90,r:330,i:.55}];
+  for(const id of ORDER){const C=CHARS[id];const pc=bakeChar(id,pl,.3);
+    const b=document.createElement('button');b.className='card';b.type='button';b.setAttribute('aria-label','Conversar con '+C.name);
+    const cvs=document.createElement('canvas');cvs.width=160;cvs.height=120;const g=cvs.getContext('2d');g.imageSmoothingEnabled=false;
+    const bgc={salome:['#3a2a2a','#5e4436'],duarte:['#2a1c1e','#4a2e26'],bosch:['#18221f','#2e3f38']}[id];
+    const gr=g.createLinearGradient(0,0,0,120);gr.addColorStop(0,bgc[1]);gr.addColorStop(1,bgc[0]);g.fillStyle=gr;g.fillRect(0,0,160,120);
+    g.drawImage(pc.body,CX-80,CY-58,160,120,0,0,160,120);g.drawImage(pc.head,CX-80,CY-58,160,120,0,0,160,120);
+    anim.expr='sonrisa';drawFace(g,pc,-(CX-80),-(CY-58),0);anim.expr='neutral';
+    const meta=document.createElement('div');meta.className='meta';
+    const f=(found[id]||[]).length;
+    meta.innerHTML=`<span class="nm"></span><span class="yr"></span><span class="rl"></span><span class="ec"></span>`;
+    meta.querySelector('.nm').textContent=C.name;meta.querySelector('.yr').textContent=C.years;meta.querySelector('.rl').textContent=C.role;meta.querySelector('.ec').textContent=`${C.place} · ${C.when} · Ecos ${f}/${C.topics.length}`;
+    b.append(cvs,meta);b.addEventListener('click',()=>enterTalk(id));wrap.appendChild(b)}
+}
+
+/* ================= talk ================= */
+let reveal={full:'',shown:0,done:true};
+function cleanTag(text){const s=text.replace(/^\s+/,'');if(s.startsWith('[')){const j=s.indexOf(']');if(j<0)return{tag:null,body:''};const tag=s.slice(1,j).trim().toLowerCase();return{tag,body:s.slice(j+1).replace(/^\s+/,'')}}return{tag:null,body:s}}
+function setExpr(x){if(!EX[x])x='neutral';if(anim.expr!==x){anim.expr=x;if(EX[x].emote){anim.emote=EX[x].emote;anim.emoteT=state.t+1.6}}}
+function sayStream(text,final){const{tag,body}=cleanTag(text);if(tag)setExpr(tag);if(body){anim.thinking=false}reveal.full=body;reveal.done=final;if(final&&!body)reveal.full='…'}
+let lastBlip=0;
+setInterval(()=>{ // reveal ticker
+  if(state.mode!=='talk')return;
+  if(reveal.shown<reveal.full.length){const step=RM?6:2;reveal.shown=Math.min(reveal.full.length,reveal.shown+step);dtxt.textContent=reveal.full.slice(0,reveal.shown);dtxt.scrollTop=dtxt.scrollHeight;anim.revealing=true;
+    if(!(voiceOn&&anim.speaking)&&performance.now()-lastBlip>70){const ch=reveal.full[reveal.shown-1]||'';if(/[a-záéíóúñ]/i.test(ch))blip(CHARS[state.cur].blip);lastBlip=performance.now()}
+    dmore.hidden=true}
+  else{anim.revealing=false;dmore.hidden=!reveal.done||busy}
+},33);
+
+function enterTalk(id){
+  audioInit();state.cur=id;const C=CHARS[id],S=SCN[C.scene];
+  const bg=new Layer(),tb=new Layer(),pr=new Layer();S.bg(bg);S.table(tb);S.props(pr);
+  sceneC={bg:bake(bg,S.lights,S.amb),table:bake(tb,S.lights,S.amb),props:bake(pr,S.lights,S.amb)};
+  try{S.post(sceneC.bg.getContext('2d'));S.post(sceneC.props.getContext('2d'))}catch(e){}
+  charC[id]=bakeChar(id,S.lights.concat([{x:CX-70,y:CY-10,r:190,i:.28}]),S.amb+.04);
+  setMode('talk');initParts(S.parts);extra=[];if(id==='bosch')for(let i=0;i<18;i++)extra.push(newPart('steam'));
+  dname.textContent=C.name;$('place').innerHTML='';const b=document.createElement('b');b.textContent=C.place;$('place').append(b,document.createTextNode(C.when));
+  updEcos();renderChips();
+  dyou.hidden=true;reveal={full:'',shown:0,done:true};dtxt.textContent='';
+  const h=hist[id];
+  if(h.length){const lastA=h[h.length-1];sayStream(lastA.role==='assistant'?lastA.content:C.greet,true);reveal.shown=reveal.full.length;dtxt.textContent=reveal.full}
+  else{sayStream(C.greet,true);speak(C.greet)}
+  startAmb(id);
+  $('q').focus({preventScroll:true});
+}
+function renderChips(){const C=CHARS[state.cur],wrap=$('chips');wrap.innerHTML='';const asked=new Set(hist[state.cur].filter(m=>m.role==='user').map(m=>m.content));
+  const list=[...C.suggest].sort((a,b)=>(asked.has(a.q)?1:0)-(asked.has(b.q)?1:0));
+  for(const s of list){const b=document.createElement('button');b.type='button';b.className='chip'+(asked.has(s.q)?' asked':'');b.textContent=s.q;b.addEventListener('click',()=>ask(s.q));wrap.appendChild(b)}}
+function updEcos(){const C=CHARS[state.cur];$('ecosBtn').textContent=`Ecos ${(found[state.cur]||[]).length}/${C.topics.length}`}
+function checkTopics(text){const C=CHARS[state.cur],low=text.toLowerCase(),f=found[state.cur]||(found[state.cur]=[]);let nw=[];for(const tp of C.topics){if(!f.includes(tp.l)&&tp.k.some(k=>low.includes(k))){f.push(tp.l);nw.push(tp.l)}}if(nw.length){store.set('found',found);updEcos();$('hint').textContent='Nuevo eco descubierto: '+nw.join(', ')+'.';const b=$('ecosBtn');b.style.background='var(--gold)';b.style.color='#1a1008';setTimeout(()=>{b.style.background='';b.style.color=''},1800)}}
+
+let busy=false,abortC=null;
+function buildPrompt(C){return `Eres una recreación educativa, generada con inteligencia artificial, de ${C.name} (${C.years}), ${C.role.toLowerCase()}. Hablas en primera persona, en español, con un estudiante dominicano de secundaria dentro de la plataforma educativa "Ecos de Quisqueya".
+Escenario que ve el estudiante: ${C.place}, ${C.when}.
+Personalidad y forma de hablar: ${C.style}
+Hechos de referencia (úsalos con precisión; no inventes fechas, nombres, citas ni obras que no estén aquí o que no conozcas con certeza):
+${C.facts}
+Reglas:
+- Conoces tu vida hasta tu muerte en ${C.death}. Si te preguntan por algo posterior, dilo con naturalidad (por ejemplo: "eso ocurrió después de mi tiempo") y relaciónalo con tus ideas, sin inventar hechos.
+- Si no estás seguro de un dato, reconócelo. No inventes citas textuales: solo puedes citar literalmente lo que aparece en los hechos de referencia.
+- Si el estudiante pregunta si eres real, aclara con amabilidad que eres una recreación con IA basada en fuentes históricas.
+- Tono respetuoso y apto para estudiantes. Si piden algo ofensivo, violento o ajeno a la historia, reconduce con elegancia hacia tu vida y tu época.
+- Responde con 40 a 110 palabras, en uno o dos párrafos breves, sin markdown, sin listas y sin emojis.
+- A veces (no siempre) termina con una pregunta corta que invite al estudiante a pensar.
+- Empieza SIEMPRE con una sola etiqueta de expresión entre corchetes, una de: [neutral] [sonrisa] [pensativo] [serio] [apasionado]. Después, el texto de tu respuesta.`}
+async function ask(q){
+  q=(q||'').trim();if(!q||busy)return;busy=true;$('send').disabled=true;
+  const id=state.cur,C=CHARS[id];stopSpeak();
+  dyou.textContent='Tú: '+q;dyou.hidden=false;$('q').value='';$('hint').textContent='';
+  anim.thinking=true;setExpr('pensativo');reveal={full:'',shown:0,done:false};dtxt.textContent='';
+  const fb=(C.suggest.find(s=>s.q===q)||{}).a;
+  let full='';
+  if(caps.sample){
+    const msgs=[{role:'user',content:buildPrompt(C)+'\n\n(El estudiante acaba de entrar en la escena.)'},{role:'assistant',content:C.greet}];
+    for(const m of hist[id].slice(-12))msgs.push(m);msgs.push({role:'user',content:q});
+    abortC=new AbortController();
+    try{const r=await caps.sample(msgs,{cache:false,modelTier:'default',signal:abortC.signal,onText:({text})=>{full=text;sayStream(text,false)}});full=r.text||full}
+    catch(e){const code=e&&e.code;if(code==='not_granted'){caps.sample=null;full=fb||'[pensativo] No tengo permiso para conectarme con la inteligencia artificial en esta vista. Puedes elegir una de las preguntas sugeridas y te responderé con gusto.'}
+      else if(e&&e.name==='AbortError'){full=full||'[neutral] …'}
+      else if(code==='rate_limited')full=fb||'[pensativo] Necesito un momento para ordenar mis ideas. Vuelve a preguntarme en unos segundos.';
+      else full=fb||(e&&e.text)||'[pensativo] Se me ha escapado el hilo de la conversación. ¿Puedes repetir la pregunta?'}
+  } else {
+    await new Promise(r=>setTimeout(r,500));
+    full=fb||'[pensativo] En esta vista no puedo conectarme con la inteligencia artificial, así que solo puedo responder las preguntas sugeridas. Abre Ecos de Quisqueya dentro de Claude para conversar libremente.';
+  }
+  anim.thinking=false;sayStream(full,true);
+  hist[id].push({role:'user',content:q},{role:'assistant',content:full});
+  checkTopics(q+' '+full);renderChips();
+  busy=false;$('send').disabled=false;
+  speak(full);
+}
+
+/* ================= voice ================= */
+function stopSpeak(){try{caps.tts&&caps.tts.stop()}catch(e){}try{speechSynthesis&&speechSynthesis.cancel()}catch(e){}anim.speaking=false}
+function speak(text){
+  if(!voiceOn)return;const C=CHARS[state.cur];const body=cleanTag(text).body.slice(0,1900);if(!body)return;
+  if(caps.tts){caps.tts.speak(body,{voice:C.voice,rate:C.rate,language:'es'}).catch(e=>{if(e&&e.code==='not_granted'){caps.tts=null;$('voiceBtn').hidden=true}})}
+  else if(window.speechSynthesis){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(body);u.lang='es-DO';const vs=speechSynthesis.getVoices().filter(v=>/^es/i.test(v.lang));if(vs.length)u.voice=vs.find(v=>/DO|US|MX|419/.test(v.lang))||vs[0];u.pitch=C.sysVoice.pitch;u.rate=C.sysVoice.rate;u.onstart=()=>anim.speaking=true;u.onend=u.onerror=()=>anim.speaking=false;speechSynthesis.speak(u)}catch(e){}}
+}
+
+/* ================= drawer ================= */
+const drawer=$('drawer'),scrim=$('scrim');
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function openDrawer(kind){
+  const C=CHARS[state.cur],body=$('drBody');body.innerHTML='';
+  if(kind==='hist'){
+    $('drTitle').textContent='Historial';const h=hist[state.cur];const list=el('div','histlist');
+    if(!h.length)list.append(el('p','note','Todavía no has hecho preguntas. Empieza con una de las sugeridas o escribe la tuya.'));
+    for(let i=0;i<h.length;i+=2){const d=el('div');d.append(el('div','q','Tú: '+h[i].content));if(h[i+1])d.append(el('p','a',cleanTag(h[i+1].content).body));list.append(d)}
+    body.append(el('h4',null,'Conversación con '+C.name),list);
+  } else {
+    $('drTitle').textContent=C.name;
+    body.append(el('p','cite',C.years+' · '+C.role));
+    body.append(el('h4',null,'Semblanza'),el('p',null,C.bio));
+    body.append(el('h4',null,'Línea de tiempo'));const ul=el('ul','tl');for(const[y,t]of C.tl){const li=el('li');li.append(el('b',null,y),el('span',null,t));ul.append(li)}body.append(ul);
+    body.append(el('h4',null,'Obras e ideas'));const ol=el('ul','works');for(const w of C.works)ol.append(el('li',null,w));body.append(ol);
+    body.append(el('h4',null,C.ideaLabel),el('p','quote',C.idea));
+    body.append(el('h4',null,`Ecos descubiertos · ${(found[state.cur]||[]).length}/${C.topics.length}`));
+    const g=el('div','ecos');for(const tp of C.topics){g.append(el('div','eco'+((found[state.cur]||[]).includes(tp.l)?' on':''),tp.l))}body.append(g,el('p','note','Cada tema que aparece en la conversación se ilumina aquí. Pregunta con curiosidad para descubrirlos todos.'));
+    body.append(el('h4',null,'Para pensar'),el('p',null,C.act));
+    body.append(el('h4',null,'Fuentes para profundizar'));const sl=el('ul','works');for(const s of C.src)sl.append(el('li',null,s));body.append(sl);
+    body.append(el('h4',null,'Sobre esta recreación'),el('p','note','Las respuestas las genera una inteligencia artificial que interpreta al personaje a partir de datos históricos. Puede equivocarse: contrasta lo que aprendas con las fuentes. La voz es sintética y no imita la voz real del personaje. La imagen es una interpretación artística.'));
+  }
+  drawer.classList.add('open');scrim.hidden=false;$('drClose').focus();
+}
+function closeDrawer(){drawer.classList.remove('open');scrim.hidden=true}
+$('drClose').onclick=closeDrawer;scrim.onclick=closeDrawer;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
+$('resBtn').onclick=()=>openDrawer('res');$('ecosBtn').onclick=()=>openDrawer('res');$('histBtn').onclick=()=>openDrawer('hist');
+
+/* ================= controls ================= */
+$('enter').onclick=()=>{audioInit();setMode('select');startAmb('title')};
+$('toTitle').onclick=()=>setMode('title');
+$('back').onclick=()=>{stopSpeak();if(abortC)try{abortC.abort()}catch(e){};busy=false;$('send').disabled=false;anim.thinking=false;closeDrawer();buildCards();setMode('select');startAmb('title')};
+$('form').addEventListener('submit',e=>{e.preventDefault();ask($('q').value)});
+$('sndBtn').onclick=e=>{sndOn=!sndOn;e.currentTarget.setAttribute('aria-pressed',sndOn);if(sndOn){audioInit();startAmb(state.mode==='talk'?state.cur:'title')}else stopAmb()};
+$('voiceBtn').onclick=e=>{voiceOn=!voiceOn;e.currentTarget.setAttribute('aria-pressed',voiceOn);if(!voiceOn)stopSpeak();else if(reveal.full)speak(reveal.full)};
+dialog.addEventListener('click',e=>{if(e.target.closest('button'))return;if(reveal.shown<reveal.full.length){reveal.shown=reveal.full.length;dtxt.textContent=reveal.full}});
+
+/* dictation */
+let dictOn=false,dictBase='';
+$('mic').onclick=()=>{const d=caps.dict;if(!d)return;
+  if(dictOn){d.stop().catch(()=>{});return}
+  dictBase=$('q').value?$('q').value.trim()+' ':'';
+  d.start({language:'es'}).catch(e=>{if(e&&e.code==='not_granted'){$('mic').hidden=true;$('hint').textContent='El micrófono no está permitido. Puedes seguir escribiendo.'}})};
+
+/* ================= capabilities ================= */
+(async()=>{
+  const use=window.claude&&window.claude.use;if(!use){$('hint').textContent='';return}
+  const get=n=>window.claude.use(n).catch(()=>null);
+  const[s,t,d]=await Promise.all([get('sample'),get('tts'),get('dictation')]);
+  caps.sample=s;caps.tts=t;caps.dict=d;
+  if(t&&t.onState)t.onState(({state:st})=>{anim.speaking=st==='speaking'||st==='starting'});
+  if(d){$('mic').hidden=false;
+    d.onPartial(({text})=>{$('q').value=dictBase+text});
+    d.onFinal(({text})=>{dictBase=(dictBase+text).trim()+' ';$('q').value=dictBase});
+    d.onState(({state:st})=>{dictOn=st!=='idle';$('mic').classList.toggle('on',dictOn);$('mic').textContent=dictOn?'Escuchando…':'Micrófono';if(!dictOn&&$('q').value.trim()&&st==='idle'){}})}
+})();
+
+/* ================= boot ================= */
+function boot(){title=buildTitle();buildCards();setMode('title');requestAnimationFrame(frame)}
+(document.fonts&&document.fonts.load?Promise.all([document.fonts.load('9px "Pixelify Sans"'),document.fonts.load('20px "IM Fell English SC"')]).catch(()=>{}):Promise.resolve()).then(()=>setTimeout(boot,0));
+})();
+</script>
